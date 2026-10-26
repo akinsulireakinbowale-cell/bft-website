@@ -1,4 +1,4 @@
-import os
+ import os
 import secrets
 from flask import Flask, request, redirect, url_for, session, render_template_string
 from flask_sqlalchemy import SQLAlchemy
@@ -79,6 +79,7 @@ def home():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     message = ""
+
     if request.method == "POST":
         name = request.form.get("full_name", "").strip()
         email = request.form.get("email", "").strip().lower()
@@ -88,12 +89,16 @@ def register():
 
         if not name or not email or not phone or not password:
             message = "Please complete all required fields."
+
         elif len(password) < 8:
             message = "Password must be at least 8 characters."
+
         elif User.query.filter_by(email=email).first():
             message = "This email is already registered."
+
         elif referral and not User.query.filter_by(referral_code=referral).first():
             message = "That referral code is not valid."
+
         else:
             user = User(
                 full_name=name,
@@ -103,13 +108,16 @@ def register():
                 referral_code=secrets.token_hex(4).upper(),
                 referred_by=referral
             )
+
             db.session.add(user)
             db.session.commit()
+
             return redirect(url_for("login", registered="1"))
 
     return page("""
     <h1>Create Account</h1>
     <p class="error">""" + message + """</p>
+
     <form method="post">
       <input name="full_name" placeholder="Full name" required maxlength="100">
       <input name="email" type="email" placeholder="Email address" required maxlength="150">
@@ -118,32 +126,43 @@ def register():
       <input name="referral_code" placeholder="Referral code (optional)">
       <button type="submit">Register</button>
     </form>
+
     <a href="/">Home</a>
     """)
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    message = "Account created. You can now log in." if request.args.get("registered") else ""
+    message = (
+        "Account created. You can now log in."
+        if request.args.get("registered")
+        else ""
+    )
+
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+
         user = User.query.filter_by(email=email).first()
 
         if user and check_password_hash(user.password_hash, password):
             session.clear()
             session["user_id"] = user.id
+
             return redirect(url_for("dashboard"))
+
         message = "Incorrect email or password."
 
     return page("""
     <h1>Log In</h1>
     <p class="error">""" + message + """</p>
+
     <form method="post">
       <input name="email" type="email" placeholder="Email address" required>
       <input name="password" type="password" placeholder="Password" required>
       <button type="submit">Log In</button>
     </form>
+
     <a href="/register">Create an account</a><br><br>
     <a href="/">Home</a>
     """)
@@ -155,18 +174,33 @@ def dashboard():
         return redirect(url_for("login"))
 
     user = db.session.get(User, session["user_id"])
+
     if not user:
         session.clear()
         return redirect(url_for("login"))
 
+    referral_code = user.referral_code
+
+    if not referral_code:
+        referral_code = secrets.token_hex(4).upper()
+        user.referral_code = referral_code
+        db.session.commit()
+
     return page(f"""
     <h1>Welcome, {user.full_name}</h1>
+
     <p>Your BFT dashboard</p>
     <p>Email: {user.email}</p>
     <p>Phone: {user.phone}</p>
+
     <p>Your referral code:</p>
-    <h2 style="text-align:center;color:#174ea6">{user.referral_code}</h2>
+
+    <h2 style="text-align:center;color:#174ea6">
+        {referral_code}
+    </h2>
+
     <p>Share this code with people you invite to BFT.</p>
+
     <a class="btn" href="/logout">Log Out</a>
     """)
 
