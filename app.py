@@ -1,5 +1,6 @@
 import os
 import secrets
+from functools import wraps
 
 from flask import (
     Flask,
@@ -16,10 +17,15 @@ app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 
+if not app.config["SECRET_KEY"]:
+    raise RuntimeError("Please set the SECRET_KEY environment variable.")
+
 database_url = os.environ.get("DATABASE_URL", "sqlite:///bft.db")
 
 if database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
+    database_url = database_url.replace(
+        "postgres://", "postgresql://", 1
+    )
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -43,25 +49,29 @@ with app.app_context():
 
 PAGE = """
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
     <title>BFT</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background: #f2f5f9;
             margin: 0;
-            padding: 25px 12px;
+            padding: 20px 12px;
+            color: #222;
         }
 
         .card {
             background: white;
-            max-width: 420px;
-            margin: 25px auto;
-            padding: 25px;
+            max-width: 850px;
+            margin: 20px auto;
+            padding: 24px;
             border-radius: 14px;
             box-shadow: 0 4px 15px #ddd;
+            overflow-wrap: anywhere;
         }
 
         h1 {
@@ -70,7 +80,6 @@ PAGE = """
         }
 
         p {
-            text-align: center;
             color: #555;
         }
 
@@ -85,22 +94,72 @@ PAGE = """
         }
 
         button, .btn {
-            display: block;
-            width: 100%;
+            display: inline-block;
             box-sizing: border-box;
             background: #174ea6;
             color: white;
-            padding: 13px;
-            margin-top: 12px;
+            padding: 12px;
+            margin: 6px 0;
             border: 0;
             border-radius: 7px;
             text-align: center;
             text-decoration: none;
             font-size: 16px;
+            cursor: pointer;
         }
 
         .error {
             color: #b00020;
+        }
+
+        .success {
+            color: #137333;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #174ea6;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background: #f5f7fa;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit, minmax(140px, 1fr)
+            );
+            gap: 12px;
+        }
+
+        .stat {
+            background: #eef3fc;
+            padding: 16px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat strong {
+            display: block;
+            font-size: 25px;
+            color: #174ea6;
         }
     </style>
 </head>
@@ -113,8 +172,44 @@ PAGE = """
 """
 
 
-def page(content):
+def page(template, **context):
+    # Render the inner template first so user data is HTML-escaped.
+    content = render_template_string(template, **context)
     return render_template_string(PAGE, content=content)
+
+
+def current_user():
+    user_id = session.get("user_id")
+
+    if user_id is None:
+        return None
+
+    return db.session.get(User, user_id)
+
+
+def admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        user = current_user()
+
+        if not user:
+            session.clear()
+            return redirect(url_for("login"))
+
+        admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+
+        if not admin_email or user.email.lower() != admin_email:
+            return page("""
+                <h1>Access Denied</h1>
+                <p>You are not authorised to access this page.</p>
+                <a class="btn" href="/dashboard">
+                    Return to Dashboard
+                </a>
+            """), 403
+
+        return view(*args, **kwargs)
+
+    return wrapped
 
 
 @app.route("/")
@@ -137,7 +232,8 @@ def register():
         phone = request.form.get("phone", "").strip()
         password = request.form.get("password", "")
         referral = (
-            request.form.get("referral_code", "").strip().upper() or None
+            request.form.get("referral_code", "").strip().upper()
+            or None
         )
 
         if not name or not email or not phone or not password:
@@ -171,17 +267,20 @@ def register():
 
     return page("""
         <h1>Create Account</h1>
-        <p class="error">""" + message + """</p>
+        <p class="error">{{ message }}</p>
 
         <form method="post">
-            <input name="full_name" placeholder="Full name"
+            <input name="full_name"
+                   placeholder="Full name"
                    required maxlength="100">
 
             <input name="email" type="email"
-                   placeholder="Email address" required maxlength="150">
+                   placeholder="Email address"
+                   required maxlength="150">
 
             <input name="phone" type="tel"
-                   placeholder="Phone number" required maxlength="30">
+                   placeholder="Phone number"
+                   required maxlength="30">
 
             <input name="password" type="password"
                    placeholder="Password (at least 8 characters)"
@@ -194,7 +293,7 @@ def register():
         </form>
 
         <a href="/">Home</a>
-    """)
+    """, message=message)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -220,7 +319,7 @@ def login():
 
     return page("""
         <h1>Log In</h1>
-        <p class="error">""" + message + """</p>
+        <p class="success">{{ message }}</p>
 
         <form method="post">
             <input name="email" type="email"
@@ -232,46 +331,145 @@ def login():
             <button type="submit">Log In</button>
         </form>
 
-        <a href="/register">Create an account</a><br><br>
+        <a href="/register">Create an account</a><br>
         <a href="/">Home</a>
-    """)
+    """, message=message)
 
 
 @app.route("/dashboard")
 def dashboard():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    user = db.session.get(User, session["user_id"])
+    user = current_user()
 
     if not user:
         session.clear()
         return redirect(url_for("login"))
 
-    referral_code = user.referral_code
-
-    if not referral_code:
-        referral_code = secrets.token_hex(4).upper()
-        user.referral_code = referral_code
+    if not user.referral_code:
+        user.referral_code = secrets.token_hex(4).upper()
         db.session.commit()
 
-    return page(f"""
-        <h1>Welcome, {user.full_name}</h1>
+    admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    is_admin = bool(admin_email) and user.email.lower() == admin_email
 
+    return page("""
+        <h1>Welcome, {{ user.full_name }}</h1>
         <p>Your BFT dashboard</p>
-        <p>Email: {user.email}</p>
-        <p>Phone: {user.phone}</p>
+
+        <p>Email: {{ user.email }}</p>
+        <p>Phone: {{ user.phone }}</p>
 
         <p>Your referral code:</p>
-
         <h2 style="text-align:center;color:#174ea6">
-            {referral_code}
+            {{ user.referral_code }}
         </h2>
 
         <p>Share this code with people you invite to BFT.</p>
 
+        {% if is_admin %}
+            <a class="btn" href="{{ url_for('admin_dashboard') }}">
+                Open Admin Dashboard
+            </a>
+        {% endif %}
+
         <a class="btn" href="/logout">Log Out</a>
-    """)
+    """, user=user, is_admin=is_admin)
+
+
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    search = request.args.get("q", "").strip()
+
+    query = User.query
+
+    if search:
+        term = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                User.full_name.ilike(term),
+                User.email.ilike(term),
+                User.phone.ilike(term),
+                User.referral_code.ilike(term),
+            )
+        )
+
+    users = query.order_by(User.id.desc()).limit(200).all()
+    total_users = User.query.count()
+    total_referrals = User.query.filter(
+        User.referred_by.isnot(None),
+        User.referred_by != "",
+    ).count()
+
+    return page("""
+        <h1>BFT Admin Dashboard</h1>
+        <p>Welcome, Administrator.</p>
+
+        <div class="stats">
+            <div class="stat">
+                <strong>{{ total_users }}</strong>
+                Registered Users
+            </div>
+
+            <div class="stat">
+                <strong>{{ total_referrals }}</strong>
+                Referral Sign-ups
+            </div>
+        </div>
+
+        <h2>Manage Users</h2>
+
+        <form method="get" action="{{ url_for('admin_dashboard') }}">
+            <input name="q" value="{{ search }}"
+                   placeholder="Search name, email, phone or referral code">
+            <button type="submit">Search</button>
+        </form>
+
+        <p>Showing up to 200 matching users, newest first.</p>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Referral Code</th>
+                        <th>Referred By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.full_name }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.phone }}</td>
+                        <td>{{ user.referral_code }}</td>
+                        <td>{{ user.referred_by or "None" }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6">No users found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <a class="btn" href="{{ url_for('dashboard') }}">
+            My Dashboard
+        </a>
+
+        <a class="btn" href="{{ url_for('logout') }}">
+            Log Out
+        </a>
+    """,
+        users=users,
+        search=search,
+        total_users=total_users,
+        total_referrals=total_referrals,
+    )
 
 
 @app.route("/logout")
