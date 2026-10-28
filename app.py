@@ -14,7 +14,10 @@ from flask import (
     abort,
 )
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import (
+    generate_password_hash,
+    check_password_hash,
+)
 
 
 # ==========================================
@@ -28,7 +31,10 @@ app.config["SECRET_KEY"] = os.environ.get(
     "change-this-secret-key",
 )
 
-database_url = os.environ.get("DATABASE_URL", "sqlite:///bft.db")
+database_url = os.environ.get(
+    "DATABASE_URL",
+    "sqlite:///bft.db",
+)
 
 # Support Render PostgreSQL connection URLs.
 if database_url.startswith("postgres://"):
@@ -488,7 +494,9 @@ REGISTER_FORM = """
             required
         >
 
-        <label for="confirm_password">Confirm password</label>
+        <label for="confirm_password">
+            Confirm password
+        </label>
         <input
             id="confirm_password"
             name="confirm_password"
@@ -806,6 +814,7 @@ def dashboard():
 
         <div class="card">
             <h2>Your referrals</h2>
+
             <p>
                 People registered with your referral code:
                 <strong>{{ referral_count }}</strong>
@@ -902,7 +911,7 @@ def edit_profile():
                     "error",
                 )
 
-    body =     """
+    body = """
     <section class="card">
         <h1>Edit my profile</h1>
 
@@ -928,6 +937,4 @@ def edit_profile():
             </p>
 
             <label for="phone">Phone number</label>
-            <input
-                id="phone"
-           
+          
