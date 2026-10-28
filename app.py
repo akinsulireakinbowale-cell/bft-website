@@ -38,7 +38,7 @@ db = SQLAlchemy(app)
 
 
 # ==========================================
-# DATABASE MODEL
+# DATABASE MODELS
 # ==========================================
 
 class User(db.Model):
@@ -49,6 +49,47 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     referral_code = db.Column(db.String(20), unique=True, nullable=False)
     referred_by = db.Column(db.String(20), nullable=True)
+
+
+# Separate table for account status.
+# The existing User table remains unchanged.
+
+class UserStatus(db.Model):
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        primary_key=True,
+    )
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True,
+    )
+
+
+def user_is_active(user):
+    if user is None:
+        return False
+
+    status = db.session.get(UserStatus, user.id)
+
+    # Existing users without a status record remain active.
+    return status is None or status.is_active
+
+
+def set_user_active(user, active):
+    status = db.session.get(UserStatus, user.id)
+
+    if status is None:
+        status = UserStatus(
+            user_id=user.id,
+            is_active=active,
+        )
+        db.session.add(status)
+    else:
+        status.is_active = active
+
+    db.session.commit()
 
 
 with app.app_context():
@@ -226,7 +267,13 @@ def current_user():
     if user_id is None:
         return None
 
-    return db.session.get(User, user_id)
+    user = db.session.get(User, user_id)
+
+    if user is not None and not user_is_active(user):
+        session.clear()
+        return None
+
+    return user
 
 
 # ==========================================
@@ -253,7 +300,9 @@ def admin_required(view):
             return page("""
                 <h1>Access Denied</h1>
 
-                <p>You are not authorised to access this page.</p>
+                <p>
+                    You are not authorised to access this page.
+                </p>
 
                 <a class="btn" href="{{ url_for('dashboard') }}">
                     Return to Dashboard
@@ -422,6 +471,22 @@ def login():
         if user and check_password_hash(
             user.password_hash, password
         ):
+            if not user_is_active(user):
+                message = (
+                    "Your account is inactive. "
+                    "Please contact the administrator."
+                )
+
+                return page("""
+                    <h1>Log In</h1>
+
+                    <p class="error">{{ message }}</p>
+
+                    <a class="btn" href="{{ url_for('login') }}">
+                        Try Again
+                    </a>
+                """, message=message), 403
+
             session.clear()
             session["user_id"] = user.id
 
@@ -455,6 +520,7 @@ def login():
         <a href="{{ url_for('register') }}">
             Create an account
         </a>
+
         <br>
 
         <a href="{{ url_for('home') }}">Home</a>
@@ -462,7 +528,7 @@ def login():
 
 
 # ==========================================
-# USER DASHBOARD — FIXED
+# USER DASHBOARD
 # ==========================================
 
 @app.route("/dashboard")
@@ -492,11 +558,13 @@ def dashboard():
         <p>Your BFT dashboard</p>
 
         <div class="profile-item">
-            <strong>Email:</strong> {{ user.email }}
+            <strong>Email:</strong>
+            {{ user.email }}
         </div>
 
         <div class="profile-item">
-            <strong>Phone:</strong> {{ user.phone }}
+            <strong>Phone:</strong>
+            {{ user.phone }}
         </div>
 
         <div class="profile-item">
@@ -504,15 +572,15 @@ def dashboard():
             {{ user.referral_code }}
         </div>
 
-        <p>Share this code with people you invite to BFT.</p>
+        <p>
+            Share this code with people you invite to BFT.
+        </p>
 
         {% if is_admin %}
             <a class="btn" href="{{ url_for('admin_dashboard') }}">
                 Open Admin Dashboard
             </a>
         {% endif %}
-
-        <br>
 
         <a class="btn" href="{{ url_for('logout') }}">
             Log Out
@@ -548,7 +616,7 @@ def admin_dashboard():
 
     total_referrals = User.query.filter(
         User.referred_by.isnot(None),
-        User.referred_by != ""
+        User.referred_by != "",
     ).count()
 
     return page("""
@@ -588,12 +656,14 @@ def admin_dashboard():
             <table>
                 <thead>
                     <tr>
-                        <th>ID / Profile</th>
+                        <th>Profile</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Referral Code</th>
                         <th>Referred By</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
 
@@ -614,215 +684,10 @@ def admin_dashboard():
                         <td>{{ user.phone }}</td>
                         <td>{{ user.referral_code }}</td>
                         <td>{{ user.referred_by or "None" }}</td>
-                    </tr>
 
-                    {% else %}
-                    <tr>
-                        <td colspan="6">No users found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        <td>
+                            {{ "Active" if user_is_active(user) else "Inactive" }}
+                        </td>
 
-        <a class="btn" href="{{ url_for('dashboard') }}">
-            My Dashboard
-        </a>
-
-        <a class="btn" href="{{ url_for('logout') }}">
-            Log Out
-        </a>
-    """,
-        users=users,
-        search=search,
-        total_users=total_users,
-        total_referrals=total_referrals,
-    )
-
-
-# ==========================================
-# VIEW USER PROFILE
-# ==========================================
-
-@app.route("/admin/user/<int:user_id>")
-@admin_required
-def admin_user_profile(user_id):
-    user = db.session.get(User, user_id)
-
-    if user is None:
-        return page("""
-            <h1>User Not Found</h1>
-
-            <p>This user does not exist.</p>
-
-            <a class="btn" href="{{ url_for('admin_dashboard') }}">
-                Back to Admin Dashboard
-            </a>
-        """), 404
-
-    return page("""
-        <h1>User Profile</h1>
-
-        <div class="profile-item">
-            <strong>User ID:</strong> {{ user.id }}
-        </div>
-
-        <div class="profile-item">
-            <strong>Full Name:</strong> {{ user.full_name }}
-        </div>
-
-        <div class="profile-item">
-            <strong>Email:</strong> {{ user.email }}
-        </div>
-
-        <div class="profile-item">
-            <strong>Phone:</strong> {{ user.phone }}
-        </div>
-
-        <div class="profile-item">
-            <strong>Referral Code:</strong> {{ user.referral_code }}
-        </div>
-
-        <div class="profile-item">
-            <strong>Referred By:</strong>
-            {{ user.referred_by or "None" }}
-        </div>
-
-        <p>Password information is not displayed.</p>
-
-        <a class="btn" href="{{ url_for(
-            'admin_edit_user',
-            user_id=user.id
-        ) }}">
-            Edit Name or Phone
-        </a>
-
-        <a class="btn" href="{{ url_for('admin_dashboard') }}">
-            Back to User List
-        </a>
-
-        <a class="btn" href="{{ url_for('dashboard') }}">
-            My Dashboard
-        </a>
-    """, user=user)
-
-
-# ==========================================
-# EDIT USER NAME AND PHONE
-# ==========================================
-
-@app.route(
-    "/admin/user/<int:user_id>/edit",
-    methods=["GET", "POST"]
-)
-@admin_required
-def admin_edit_user(user_id):
-    user = db.session.get(User, user_id)
-
-    if user is None:
-        return page("""
-            <h1>User Not Found</h1>
-
-            <a class="btn" href="{{ url_for('admin_dashboard') }}">
-                Back to Admin Dashboard
-            </a>
-        """), 404
-
-    message = ""
-
-    if request.method == "POST":
-        full_name = request.form.get(
-            "full_name", ""
-        ).strip()
-
-        phone = request.form.get(
-            "phone", ""
-        ).strip()
-
-        if not full_name or not phone:
-            message = "Name and phone number are both required."
-
-        elif len(full_name) > 100:
-            message = "Name must be 100 characters or fewer."
-
-        elif len(phone) > 30:
-            message = "Phone number must be 30 characters or fewer."
-
-        else:
-            user.full_name = full_name
-            user.phone = phone
-
-            db.session.commit()
-
-            return redirect(
-                url_for(
-                    "admin_user_profile",
-                    user_id=user.id,
-                    updated="1"
-                )
-            )
-
-    return page("""
-        <h1>Edit User Details</h1>
-
-        <p class="error">{{ message }}</p>
-
-        <p>
-            Editing user #{{ user.id }}.
-            Email and password cannot be changed here.
-        </p>
-
-        <form method="post">
-            <label for="full_name">Full name</label>
-
-            <input
-                id="full_name"
-                name="full_name"
-                value="{{ user.full_name }}"
-                required
-                maxlength="100"
-            >
-
-            <label for="phone">Phone number</label>
-
-            <input
-                id="phone"
-                name="phone"
-                type="tel"
-                value="{{ user.phone }}"
-                required
-                maxlength="30"
-            >
-
-            <button type="submit">Save Changes</button>
-        </form>
-
-        <a class="btn" href="{{ url_for(
-            'admin_user_profile',
-            user_id=user.id
-        ) }}">
-            Cancel
-        </a>
-
-        <a class="btn" href="{{ url_for('admin_dashboard') }}">
-            Back to User List
-        </a>
-    """, user=user, message=message)
-
-
-# ==========================================
-# LOGOUT
-# ==========================================
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("home"))
-
-
-# ==========================================
-# START APPLICATION
-# ==========================================
-
-if __name__ == "__main__":
-    app.run(debug=False)
+                        <td>
+                            {% if user.id != session.get('user_id') %
