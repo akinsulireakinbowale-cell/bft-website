@@ -1136,6 +1136,50 @@ def admin_edit_user(user_id):
         )
 
 # ==========================================
+# ADMIN: DEACTIVATE USER
+# ==========================================
+
+@app.route(
+    "/admin/users/<int:user_id>/deactivate",
+    methods=["POST"],
+)
+@admin_required
+def admin_deactivate_user(user_id):
+    target = db.session.get(User, user_id)
+
+    if target is None:
+        flash("User not found.", "error")
+    else:
+        if is_admin(target):
+            flash("You cannot deactivate the administrator account.", "error")
+        else:
+            set_user_active(target, False)
+            flash("User deactivated successfully.", "success")
+
+    return redirect(url_for("admin_dashboard"))
+
+
+# ==========================================
+# ADMIN: ACTIVATE USER
+# ==========================================
+
+@app.route(
+    "/admin/users/<int:user_id>/activate",
+    methods=["POST"],
+)
+@admin_required
+def admin_activate_user(user_id):
+    target = db.session.get(User, user_id)
+
+    if target is None:
+        flash("User not found.", "error")
+    else:
+        set_user_active(target, True)
+        flash("User activated successfully.", "success")
+
+    return redirect(url_for("admin_dashboard"))
+
+# ==========================================
 # USER LOGOUT
 # ==========================================
 
