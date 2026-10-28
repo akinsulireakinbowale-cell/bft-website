@@ -937,4 +937,17 @@ def edit_profile():
             </p>
 
             <label for="phone">Phone number</label>
-          
+            <input
+                id="phone"
+                name="phone"
+                maxlength="40"
+                value="{{ request.form.get('phone', user.phone or '') }}"
+            >
+
+            <button type="submit">Save changes</button>
+            <a href="{{ url_for('dashboard') }}">Cancel</a>
+        </form>
+    </section>
+    """
+
+    return page("Edit Profile", body, user=user)
