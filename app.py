@@ -11,10 +11,7 @@ from flask import (
     render_template_string,
 )
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import (
-    generate_password_hash,
-    check_password_hash,
-)
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 # ==========================================
@@ -22,24 +19,16 @@ from werkzeug.security import (
 # ==========================================
 
 app = Flask(__name__)
-
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 
 if not app.config["SECRET_KEY"]:
-    raise RuntimeError(
-        "Please set the SECRET_KEY environment variable."
-    )
+    raise RuntimeError("Please set the SECRET_KEY environment variable.")
 
-database_url = os.environ.get(
-    "DATABASE_URL",
-    "sqlite:///bft.db",
-)
+database_url = os.environ.get("DATABASE_URL", "sqlite:///bft.db")
 
 if database_url.startswith("postgres://"):
     database_url = database_url.replace(
-        "postgres://",
-        "postgresql://",
-        1,
+        "postgres://", "postgresql://", 1
     )
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
@@ -201,8 +190,7 @@ def admin_required(view):
                     You are not authorised to access this page.
                 </p>
 
-                <a class="btn"
-                   href="{{ url_for('dashboard') }}">
+                <a class="btn" href="{{ url_for('dashboard') }}">
                     Return to Dashboard
                 </a>
             """), 403
@@ -467,13 +455,11 @@ def home():
             Create an account to get started.
         </p>
 
-        <a class="btn"
-           href="{{ url_for('register') }}">
+        <a class="btn" href="{{ url_for('register') }}">
             Create an Account
         </a>
 
-        <a class="btn"
-           href="{{ url_for('login') }}">
+        <a class="btn" href="{{ url_for('login') }}">
             Log In
         </a>
     """)
@@ -494,23 +480,28 @@ def register():
 
     if request.method == "POST":
         name = request.form.get(
-            "full_name", ""
+            "full_name",
+            "",
         ).strip()
 
         email = request.form.get(
-            "email", ""
+            "email",
+            "",
         ).strip().lower()
 
         phone = request.form.get(
-            "phone", ""
+            "phone",
+            "",
         ).strip()
 
         password = request.form.get(
-            "password", ""
+            "password",
+            "",
         )
 
         referral = request.form.get(
-            "referral_code", ""
+            "referral_code",
+            "",
         ).strip().upper() or None
 
         if not name or not email or not phone or not password:
@@ -564,29 +555,46 @@ def register():
 
         <form method="post">
             <label>Full Name</label>
-            <input name="full_name"
-                   required maxlength="100"
-                   placeholder="Full name">
+            <input
+                name="full_name"
+                required
+                maxlength="100"
+                placeholder="Full name"
+            >
 
             <label>Email Address</label>
-            <input name="email" type="email"
-                   required maxlength="150"
-                   placeholder="Email address">
+            <input
+                name="email"
+                type="email"
+                required
+                maxlength="150"
+                placeholder="Email address"
+            >
 
             <label>Phone Number</label>
-            <input name="phone" type="tel"
-                   required maxlength="30"
-                   placeholder="Phone number">
+            <input
+                name="phone"
+                type="tel"
+                required
+                maxlength="30"
+                placeholder="Phone number"
+            >
 
             <label>Password</label>
-            <input name="password" type="password"
-                   required minlength="8"
-                   placeholder="At least 8 characters">
+            <input
+                name="password"
+                type="password"
+                required
+                minlength="8"
+                placeholder="At least 8 characters"
+            >
 
             <label>Referral Code (Optional)</label>
-            <input name="referral_code"
-                   placeholder="Enter referral code"
-                   value="{{ referral }}">
+            <input
+                name="referral_code"
+                placeholder="Enter referral code"
+                value="{{ referral }}"
+            >
 
             <button type="submit">Register</button>
         </form>
@@ -613,11 +621,13 @@ def login():
 
     if request.method == "POST":
         email = request.form.get(
-            "email", ""
+            "email",
+            "",
         ).strip().lower()
 
         password = request.form.get(
-            "password", ""
+            "password",
+            "",
         )
 
         user = User.query.filter_by(email=email).first()
@@ -635,8 +645,7 @@ def login():
                         Please contact the administrator.
                     </p>
 
-                    <a class="btn"
-                       href="{{ url_for('login') }}">
+                    <a class="btn" href="{{ url_for('login') }}">
                         Back to Login
                     </a>
                 """), 403
@@ -655,12 +664,20 @@ def login():
 
         <form method="post">
             <label>Email Address</label>
-            <input name="email" type="email"
-                   required placeholder="Email address">
+            <input
+                name="email"
+                type="email"
+                required
+                placeholder="Email address"
+            >
 
             <label>Password</label>
-            <input name="password" type="password"
-                   required placeholder="Password">
+            <input
+                name="password"
+                type="password"
+                required
+                placeholder="Password"
+            >
 
             <button type="submit">Log In</button>
         </form>
@@ -728,24 +745,24 @@ def dashboard():
 
         <p>Share this link with people you invite to BFT.</p>
 
-        <input value="{{ referral_link }}"
-               readonly onclick="this.select()">
+        <input
+            value="{{ referral_link }}"
+            readonly
+            onclick="this.select()"
+        >
 
         <div class="navigation">
-            <a class="btn"
-               href="{{ url_for('edit_profile') }}">
+            <a class="btn" href="{{ url_for('edit_profile') }}">
                 Edit My Profile
             </a>
 
             {% if is_admin_user(user) %}
-                <a class="btn"
-                   href="{{ url_for('admin_dashboard') }}">
+                <a class="btn" href="{{ url_for('admin_dashboard') }}">
                     Admin Dashboard
                 </a>
             {% endif %}
 
-            <a class="btn"
-               href="{{ url_for('logout') }}">
+            <a class="btn" href="{{ url_for('logout') }}">
                 Log Out
             </a>
         </div>
@@ -772,11 +789,13 @@ def edit_profile():
 
     if request.method == "POST":
         name = request.form.get(
-            "full_name", ""
+            "full_name",
+            "",
         ).strip()
 
         phone = request.form.get(
-            "phone", ""
+            "phone",
+            "",
         ).strip()
 
         if not name or not phone:
@@ -795,7 +814,11 @@ def edit_profile():
 
             except Exception:
                 db.session.rollback()
-                app.logger.exception("Profile update failed.")
+
+                app.logger.exception(
+                    "Profile update failed."
+                )
+
                 message = "Unable to update your profile."
 
     return page("""
@@ -805,9 +828,12 @@ def edit_profile():
 
         <form method="post">
             <label>Full Name</label>
-            <input name="full_name"
-                   value="{{ user.full_name }}"
-                   maxlength="100" required>
+            <input
+                name="full_name"
+                value="{{ user.full_name }}"
+                maxlength="100"
+                required
+            >
 
             <label>Email Address</label>
             <input value="{{ user.email }}" readonly>
@@ -815,15 +841,17 @@ def edit_profile():
             <p>Your email address cannot be changed here.</p>
 
             <label>Phone Number</label>
-            <input name="phone"
-                   value="{{ user.phone }}"
-                   maxlength="30" required>
+            <input
+                name="phone"
+                value="{{ user.phone }}"
+                maxlength="30"
+                required
+            >
 
             <button type="submit">Save Changes</button>
         </form>
 
-        <a class="btn"
-           href="{{ url_for('dashboard') }}">
+        <a class="btn" href="{{ url_for('dashboard') }}">
             Back to Dashboard
         </a>
     """, user=user, message=message)
@@ -836,7 +864,10 @@ def edit_profile():
 @app.route("/admin")
 @admin_required
 def admin_dashboard():
-    search = request.args.get("search", "").strip()
+    search = request.args.get(
+        "search",
+        "",
+    ).strip()
 
     query = User.query
 
@@ -876,21 +907,4 @@ def admin_dashboard():
             </div>
 
             <div class="stat">
-                <strong>{{ active_users }}</strong>
-                Active Users
-            </div>
-
-            <div class="stat">
-                <strong>{{ inactive_users }}</strong>
-                Inactive Users
-            </div>
-        </div>
-
-        <h2>Search Users</h2>
-
-        <form method="get">
-            <input name="search"
-                   placeholder="Search name, email, phone or referral code"
-                   value="{{ search }}">
-
- 
+            
