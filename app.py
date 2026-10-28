@@ -11,6 +11,7 @@ from flask import (
     render_template_string,
 )
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -19,16 +20,22 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # ==========================================
 
 app = Flask(__name__)
+
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 
 if not app.config["SECRET_KEY"]:
     raise RuntimeError("Please set the SECRET_KEY environment variable.")
 
-database_url = os.environ.get("DATABASE_URL", "sqlite:///bft.db")
+database_url = os.environ.get(
+    "DATABASE_URL",
+    "sqlite:///bft.db",
+)
 
 if database_url.startswith("postgres://"):
     database_url = database_url.replace(
-        "postgres://", "postgresql://", 1
+        "postgres://",
+        "postgresql://",
+        1,
     )
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
@@ -875,7 +882,7 @@ def admin_dashboard():
         term = f"%{search}%"
 
         query = query.filter(
-            db.or_(
+            or_(
                 User.full_name.ilike(term),
                 User.email.ilike(term),
                 User.phone.ilike(term),
@@ -904,7 +911,4 @@ def admin_dashboard():
             <div class="stat">
                 <strong>{{ total_users }}</strong>
                 Total Users
-            </div>
-
-            <div class="stat">
-            
+          
