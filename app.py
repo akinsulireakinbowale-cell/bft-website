@@ -1057,6 +1057,85 @@ def admin_dashboard():
     )
 
 # ==========================================
+# ADMIN: EDIT USER
+# ==========================================
+
+@app.route("/admin/users/<int:user_id>/edit", methods=["GET", "POST"])
+@admin_required
+def admin_edit_user(user_id):
+    target = db.session.get(User, user_id)
+
+    if target is None:
+        flash("User not found.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        phone = request.form.get("phone", "").strip()
+
+        if not full_name or not phone:
+            flash("Name and phone number are required.", "error")
+
+        elif len(full_name) > 120 or len(phone) > 40:
+            flash("The name or phone number is too long.", "error")
+
+        else:
+            try:
+                target.full_name = full_name
+                target.phone = phone
+
+                db.session.commit()
+
+                flash("User details updated successfully.", "success")
+                return redirect(url_for("admin_dashboard"))
+
+            except Exception:
+                db.session.rollback()
+                app.logger.exception("Admin user update failed.")
+                flash("Unable to update the user. Please try again.", "error")
+
+    body = """
+    <section class="card">
+        <h1>Edit User</h1>
+
+        <p><strong>Email:</strong> {{ target.email }}</p>
+
+        <form method="post">
+            <label for="full_name">Full name</label>
+            <input
+                id="full_name"
+                name="full_name"
+                maxlength="120"
+                required
+                value="{{ request.form.get('full_name', target.full_name) }}"
+            >
+
+            <label for="phone">Phone number</label>
+            <input
+                id="phone"
+                name="phone"
+                maxlength="40"
+                required
+                value="{{ request.form.get('phone', target.phone or '') }}"
+            >
+
+            <button type="submit">Save Changes</button>
+
+            <a href="{{ url_for('admin_dashboard') }}">
+                Cancel
+            </a>
+        </form>
+    </section>
+    """
+
+    return page(
+        "Edit User",
+        body,
+        target=target,
+        user=get_current_user(),
+        )
+
+# ==========================================
 # USER LOGOUT
 # ==========================================
 
