@@ -30,6 +30,9 @@ PERMANENT_SESSION_LIFETIME=1800,
 )
 
 if not app.config["SECRET_KEY"]:
+raise RuntimeError("Please set the SECRET_KEY environment variable.")
+
+if not app.config["SECRET_KEY"]:
     raise RuntimeError("Please set the SECRET_KEY environment variable.")
 
 database_url = os.environ.get(
