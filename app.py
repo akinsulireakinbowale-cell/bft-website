@@ -12,25 +12,30 @@ from flask import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import (
+    generate_password_hash,
+    check_password_hash,
+)
 
 
 # ==========================================
 # APP CONFIGURATION
 # ==========================================
 
-app = Flask(name)
+app = Flask(__name__)
 
 app.config.update(
-SECRET_KEY=os.environ.get("SECRET_KEY"),
-SESSION_COOKIE_HTTPONLY=True,
-SESSION_COOKIE_SAMESITE="Lax",
-SESSION_COOKIE_SECURE=True,
-PERMANENT_SESSION_LIFETIME=1800,
+    SECRET_KEY=os.environ.get("SECRET_KEY"),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=True,
+    PERMANENT_SESSION_LIFETIME=1800,
 )
 
 if not app.config["SECRET_KEY"]:
-    raise RuntimeError("Please set the SECRET_KEY environment variable.")
+    raise RuntimeError(
+        "Please set the SECRET_KEY environment variable."
+    )
 
 database_url = os.environ.get(
     "DATABASE_URL",
@@ -104,7 +109,7 @@ class UserStatus(db.Model):
     )
 
 
-# Create missing tables without intentionally deleting existing data.
+# Create missing tables without intentionally deleting data.
 with app.app_context():
     db.create_all()
 
@@ -552,9 +557,7 @@ def register():
             except Exception:
                 db.session.rollback()
 
-                app.logger.exception(
-                    "Registration failed."
-                )
+                app.logger.exception("Registration failed.")
 
                 message = (
                     "Registration could not be completed. "
@@ -664,6 +667,7 @@ def login():
                 """), 403
 
             session.clear()
+            session.permanent = True
             session["user_id"] = user.id
 
             return redirect(url_for("dashboard"))
@@ -828,9 +832,7 @@ def edit_profile():
             except Exception:
                 db.session.rollback()
 
-                app.logger.exception(
-                    "Profile update failed."
-                )
+                app.logger.exception("Profile update failed.")
 
                 message = "Unable to update your profile."
 
@@ -913,177 +915,4 @@ def admin_dashboard():
 
         <p>Manage BFT registered users.</p>
 
-        <div class="stats">
-            <div class="stat">
-                <strong>{{ total_users }}</strong>
-                Total Users
-          
-            </div>
-
-            <div class="stat">
-                <strong>{{ active_users }}</strong>
-                Active Users
-            </div>
-
-            <div class="stat">
-                <strong>{{ inactive_users }}</strong>
-                Inactive Users
-            </div>
-        </div>
-
-        <h2>Search Users</h2>
-
-        <form method="get" action="{{ url_for('admin_dashboard') }}">
-            <input
-                type="text"
-                name="search"
-                value="{{ search }}"
-                placeholder="Search by name, email, phone or referral code"
-            >
-            <button type="submit">Search</button>
-        </form>
-
-        <p>Total matching users: {{ users|length }}</p>
-
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Referral Code</th>
-                        <th>Referred By</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for person in users %}
-                    <tr>
-                        <td>{{ person.id }}</td>
-                        <td>{{ person.full_name }}</td>
-                        <td>{{ person.email }}</td>
-                        <td>{{ person.phone }}</td>
-                        <td>{{ person.referral_code }}</td>
-                        <td>{{ person.referred_by or "None" }}</td>
-
-                        <td>
-                            {% if user_is_active(person) %}
-                                <span class="status-active">Active</span>
-                            {% else %}
-                                <span class="status-inactive">Inactive</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if user_is_active(person) %}
-                                <form
-                                    class="action-form"
-                                    method="post"
-                                    action="{{ url_for('deactivate_user', user_id=person.id) }}"
-                                    onsubmit="return confirm('Deactivate this account?');"
-                                >
-                                    <button class="danger" type="submit">
-                                        Deactivate
-                                    </button>
-                                </form>
-                            {% else %}
-                                <form
-                                    class="action-form"
-                                    method="post"
-                                    action="{{ url_for('activate_user', user_id=person.id) }}"
-                                    onsubmit="return confirm('Activate this account?');"
-                                >
-                                    <button class="success-button" type="submit">
-                                        Activate
-                                    </button>
-                                </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="8">No users found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <p>
-            <a class="btn" href="{{ url_for('dashboard') }}">
-                Back to Dashboard
-            </a>
-
-            <a class="btn" href="{{ url_for('logout') }}">
-                Log Out
-            </a>
-        </p>
-    """,
-        search=search,
-        users=users,
-        total_users=total_users,
-        active_users=active_users,
-        inactive_users=inactive_users,
-        user_is_active=user_is_active,
-    )
-
-
-# ==========================================
-# ACTIVATE USER
-# ==========================================
-
-@app.route("/admin/activate/<int:user_id>", methods=["POST"])
-@admin_required
-def activate_user(user_id):
-    user = db.session.get(User, user_id)
-
-    if user is None:
-        return "User not found", 404
-
-    set_user_active(user, True)
-
-    return redirect(url_for("admin_dashboard"))
-
-
-# ==========================================
-# DEACTIVATE USER
-# ==========================================
-
-@app.route("/admin/deactivate/<int:user_id>", methods=["POST"])
-@admin_required
-def deactivate_user(user_id):
-    admin = current_user()
-    user = db.session.get(User, user_id)
-
-    if user is None:
-        return "User not found", 404
-
-    # Prevent the administrator from deactivating their own account.
-    if user.id == admin.id:
-        return "You cannot deactivate your own account.", 400
-
-    set_user_active(user, False)
-
-    return redirect(url_for("admin_dashboard"))
-
-
-# ==========================================
-# LOG OUT
-# ==========================================
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("home"))
-
-
-# ==========================================
-# START APPLICATION
-# ==========================================
-
-if __name__ == "__main__":
-    app.run(debug=False)
+        <div class="s
