@@ -949,6 +949,114 @@ def edit_profile():
     return page("Edit Profile", body, user=user)
 
 # ==========================================
+# ADMIN DASHBOARD
+# ==========================================
+
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    search = request.args.get("search", "").strip()
+
+    query = User.query
+
+    if search:
+        query = query.filter(
+            db.or_(
+                User.full_name.ilike(f"%{search}%"),
+                User.email.ilike(f"%{search}%"),
+            )
+        )
+
+    users = query.order_by(User.id.desc()).all()
+
+    total_users = User.query.count()
+
+    all_users = User.query.all()
+    active_users = sum(
+        1 for member in all_users
+        if user_is_active(member)
+    )
+    inactive_users = total_users - active_users
+
+    body = """
+    <section class="card">
+        <h1>Administrator Dashboard</h1>
+        <p>Welcome to BFT user management.</p>
+
+        <div class="card">
+            <h2>User Statistics</h2>
+            <p>Total users: <strong>{{ total_users }}</strong></p>
+            <p>Active users: <strong>{{ active_users }}</strong></p>
+            <p>Deactivated users: <strong>{{ inactive_users }}</strong></p>
+        </div>
+
+        <form method="get">
+            <label for="search">Search by name or email</label>
+            <input
+                id="search"
+                name="search"
+                value="{{ search }}"
+                placeholder="Enter name or email"
+            >
+            <button type="submit">Search</button>
+            <a href="{{ url_for('admin_dashboard') }}">Clear</a>
+        </form>
+
+        <h2>Registered Users</h2>
+
+        {% for member in users %}
+            <div class="card">
+                <h3>{{ member.full_name }}</h3>
+                <p><strong>ID:</strong> {{ member.id }}</p>
+                <p><strong>Email:</strong> {{ member.email }}</p>
+                <p><strong>Phone:</strong> {{ member.phone }}</p>
+                <p><strong>Referral code:</strong> {{ member.referral_code }}</p>
+                <p><strong>Referred by:</strong> {{ member.referred_by or "None" }}</p>
+
+                {% if user_is_active(member) %}
+                    <p><strong>Status:</strong> Active</p>
+                {% else %}
+                    <p><strong>Status:</strong> Deactivated</p>
+                {% endif %}
+
+                <p>
+                    <a class="button"
+                       href="{{ url_for('admin_edit_user', user_id=member.id) }}">
+                       Edit User
+                    </a>
+                </p>
+
+                {% if user_is_active(member) %}
+                    <form method="post"
+                          action="{{ url_for('admin_deactivate_user', user_id=member.id) }}"
+                          onsubmit="return confirm('Deactivate this user?');">
+                        <button type="submit">Deactivate</button>
+                    </form>
+                {% else %}
+                    <form method="post"
+                          action="{{ url_for('admin_activate_user', user_id=member.id) }}">
+                        <button type="submit">Activate</button>
+                    </form>
+                {% endif %}
+            </div>
+        {% else %}
+            <p>No users found.</p>
+        {% endfor %}
+    </section>
+    """
+
+    return page(
+        "Administrator Dashboard",
+        body,
+        users=users,
+        search=search,
+        total_users=total_users,
+        active_users=active_users,
+        inactive_users=inactive_users,
+        user_is_active=user_is_active,
+    )
+
+# ==========================================
 # USER LOGOUT
 # ==========================================
 
