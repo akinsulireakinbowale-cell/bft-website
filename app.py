@@ -1,5 +1,6 @@
 import os
 import secrets
+import string
 from functools import wraps
 
 from flask import (
@@ -7,15 +8,13 @@ from flask import (
     request,
     redirect,
     url_for,
+    flash,
     session,
     render_template_string,
+    abort,
 )
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import or_
-from werkzeug.security import (
-    generate_password_hash,
-    check_password_hash,
-)
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 # ==========================================
@@ -24,24 +23,14 @@ from werkzeug.security import (
 
 app = Flask(__name__)
 
-app.config.update(
-    SECRET_KEY=os.environ.get("SECRET_KEY"),
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=True,
-    PERMANENT_SESSION_LIFETIME=1800,
+app.config["SECRET_KEY"] = os.environ.get(
+    "SECRET_KEY",
+    "change-this-secret-key",
 )
 
-if not app.config["SECRET_KEY"]:
-    raise RuntimeError(
-        "Please set the SECRET_KEY environment variable."
-    )
+database_url = os.environ.get("DATABASE_URL", "sqlite:///bft.db")
 
-database_url = os.environ.get(
-    "DATABASE_URL",
-    "sqlite:///bft.db",
-)
-
+# Support Render PostgreSQL connection URLs.
 if database_url.startswith("postgres://"):
     database_url = database_url.replace(
         "postgres://",
@@ -63,7 +52,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     full_name = db.Column(
-        db.String(100),
+        db.String(120),
         nullable=False,
     )
 
@@ -71,11 +60,13 @@ class User(db.Model):
         db.String(150),
         unique=True,
         nullable=False,
+        index=True,
     )
 
     phone = db.Column(
-        db.String(30),
+        db.String(40),
         nullable=False,
+        default="",
     )
 
     password_hash = db.Column(
@@ -84,22 +75,26 @@ class User(db.Model):
     )
 
     referral_code = db.Column(
-        db.String(20),
+        db.String(30),
         unique=True,
         nullable=False,
+        index=True,
     )
 
     referred_by = db.Column(
-        db.String(20),
+        db.String(30),
         nullable=True,
     )
 
 
 class UserStatus(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
     user_id = db.Column(
         db.Integer,
         db.ForeignKey("user.id"),
-        primary_key=True,
+        unique=True,
+        nullable=False,
     )
 
     is_active = db.Column(
@@ -109,109 +104,117 @@ class UserStatus(db.Model):
     )
 
 
-# Create missing tables without intentionally deleting data.
-with app.app_context():
-    db.create_all()
-
-
 # ==========================================
-# ACCOUNT STATUS HELPERS
+# USER AND REFERRAL FUNCTIONS
 # ==========================================
 
 def user_is_active(user):
     if user is None:
         return False
 
-    status = db.session.get(UserStatus, user.id)
+    status = UserStatus.query.filter_by(
+        user_id=user.id
+    ).first()
 
-    # Existing users without a status record remain active.
-    return status is None or status.is_active
+    return True if status is None else bool(status.is_active)
 
 
 def set_user_active(user, active):
-    status = db.session.get(UserStatus, user.id)
+    status = UserStatus.query.filter_by(
+        user_id=user.id
+    ).first()
 
     if status is None:
-        status = UserStatus(
-            user_id=user.id,
-            is_active=active,
+        db.session.add(
+            UserStatus(
+                user_id=user.id,
+                is_active=bool(active),
+            )
         )
-        db.session.add(status)
     else:
-        status.is_active = active
+        status.is_active = bool(active)
 
     db.session.commit()
 
 
-def generate_unique_referral_code():
-    while True:
-        code = secrets.token_hex(4).upper()
+def make_referral_code(length=8):
+    alphabet = string.ascii_uppercase + string.digits
 
-        existing = User.query.filter_by(
+    for _ in range(30):
+        code = "".join(
+            secrets.choice(alphabet)
+            for _ in range(length)
+        )
+
+        if not User.query.filter_by(
             referral_code=code
-        ).first()
-
-        if existing is None:
+        ).first():
             return code
 
+    return secrets.token_hex(5).upper()
 
-def current_user():
+
+def is_admin(user):
+    configured_email = os.environ.get(
+        "ADMIN_EMAIL",
+        "",
+    ).strip().lower()
+
+    return bool(
+        user
+        and configured_email
+        and user.email.lower() == configured_email
+    )
+
+
+def get_current_user():
     user_id = session.get("user_id")
 
-    if user_id is None:
+    if not user_id:
         return None
 
     user = db.session.get(User, user_id)
 
-    if user is None:
-        session.clear()
-        return None
-
-    if not user_is_active(user):
+    if user is None or not user_is_active(user):
         session.clear()
         return None
 
     return user
 
 
-def get_admin_email():
-    return os.environ.get(
-        "ADMIN_EMAIL",
-        "",
-    ).strip().lower()
+# ==========================================
+# LOGIN AND ADMIN PROTECTION
+# ==========================================
 
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if get_current_user() is None:
+            flash(
+                "Please log in to continue.",
+                "error",
+            )
+            return redirect(url_for("login"))
 
-def is_admin_user(user):
-    admin_email = get_admin_email()
+        return view(*args, **kwargs)
 
-    return (
-        user is not None
-        and bool(admin_email)
-        and user.email.lower() == admin_email
-    )
+    return wrapped
 
 
 def admin_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        user = current_user()
+        user = get_current_user()
 
         if user is None:
-            session.clear()
+            flash(
+                "Please log in to continue.",
+                "error",
+            )
             return redirect(url_for("login"))
 
-        if not is_admin_user(user):
-            return page("""
-                <h1>Access Denied</h1>
-
-                <p class="error">
-                    You are not authorised to access this page.
-                </p>
-
-                <a class="btn" href="{{ url_for('dashboard') }}">
-                    Return to Dashboard
-                </a>
-            """), 403
+        if not is_admin(user):
+            abort(403)
 
         return view(*args, **kwargs)
 
@@ -219,239 +222,302 @@ def admin_required(view):
 
 
 # ==========================================
-# PAGE DESIGN
+# WEBSITE DESIGN
 # ==========================================
 
-PAGE = """
-<!DOCTYPE html>
+STYLE = """
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #f4f7fb;
+    color: #182230;
+    font-family: Arial, sans-serif;
+}
+
+header {
+    background: #102b4e;
+    color: white;
+    padding: 16px 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+header a {
+    color: white;
+    text-decoration: none;
+    margin-left: 12px;
+}
+
+main {
+    max-width: 1100px;
+    margin: 28px auto;
+    padding: 0 16px;
+}
+
+.card {
+    background: white;
+    padding: 22px;
+    border-radius: 12px;
+    box-shadow: 0 3px 14px #0000000d;
+    margin-bottom: 18px;
+}
+
+label {
+    display: block;
+    margin: 12px 0 5px;
+    font-weight: bold;
+}
+
+input {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 16px;
+}
+
+button,
+.button {
+    display: inline-block;
+    background: #1769aa;
+    color: white;
+    border: 0;
+    border-radius: 7px;
+    padding: 10px 14px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.danger {
+    background: #b42318;
+}
+
+.success {
+    background: #16803c;
+}
+
+.muted {
+    color: #64748b;
+}
+
+.notice {
+    padding: 11px;
+    border-radius: 7px;
+    background: #eaf2ff;
+    margin: 10px 0;
+}
+
+.notice.error {
+    background: #ffe8e6;
+    color: #8c1d18;
+}
+
+.notice.success {
+    background: #e6f7ed;
+    color: #17643a;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.inline {
+    display: inline-block;
+    margin: 3px;
+}
+
+.actions {
+    min-width: 220px;
+}
+
+@media (max-width: 600px) {
+    header a {
+        margin-left: 0;
+        margin-right: 10px;
+    }
+
+    th,
+    td {
+        padding: 8px;
+        font-size: 13px;
+    }
+}
+"""
+
+
+def page(title, body, **context):
+    template = """
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-
+    <meta charset="utf-8">
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1"
     >
-
-    <title>BFT Website</title>
-
+    <title>{{ title }} | BFT</title>
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background: #f2f5f9;
-            margin: 0;
-            padding: 20px 12px;
-            color: #222;
-        }
-
-        .card {
-            background: white;
-            max-width: 1100px;
-            margin: 20px auto;
-            padding: 24px;
-            border-radius: 14px;
-            box-shadow: 0 4px 15px #ddd;
-            overflow-wrap: anywhere;
-        }
-
-        h1 {
-            color: #174ea6;
-            text-align: center;
-        }
-
-        h2 {
-            color: #174ea6;
-        }
-
-        p {
-            color: #555;
-            line-height: 1.6;
-        }
-
-        input {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border-radius: 7px;
-            border: 1px solid #ccc;
-            font-size: 16px;
-        }
-
-        button,
-        .btn {
-            display: inline-block;
-            background: #174ea6;
-            color: white;
-            padding: 12px 16px;
-            margin: 6px 0;
-            border: 0;
-            border-radius: 7px;
-            text-align: center;
-            text-decoration: none;
-            font-size: 15px;
-            cursor: pointer;
-        }
-
-        button {
-            width: 100%;
-        }
-
-        .danger {
-            background: #b00020;
-        }
-
-        .success-button {
-            background: #137333;
-        }
-
-        .error {
-            color: #b00020;
-        }
-
-        .success {
-            color: #137333;
-        }
-
-        .table-wrap {
-            overflow-x: auto;
-            width: 100%;
-        }
-
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 16px;
-        }
-
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
-            vertical-align: top;
-        }
-
-        th {
-            background: #174ea6;
-            color: white;
-        }
-
-        tr:nth-child(even) {
-            background: #f5f7fa;
-        }
-
-        td a {
-            color: #174ea6;
-            font-weight: bold;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(
-                auto-fit,
-                minmax(140px, 1fr)
-            );
-            gap: 12px;
-        }
-
-        .stat {
-            background: #eef3fc;
-            padding: 16px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .stat strong {
-            display: block;
-            font-size: 25px;
-            color: #174ea6;
-        }
-
-        .profile-item {
-            padding: 12px;
-            margin: 8px 0;
-            background: #f5f7fa;
-            border-radius: 7px;
-        }
-
-        .profile-item strong {
-            color: #174ea6;
-        }
-
-        label {
-            display: block;
-            margin-top: 12px;
-            font-weight: bold;
-        }
-
-        .action-form {
-            margin: 0;
-        }
-
-        .action-form button {
-            min-width: 110px;
-        }
-
-        .status-active {
-            color: #137333;
-            font-weight: bold;
-        }
-
-        .status-inactive {
-            color: #b00020;
-            font-weight: bold;
-        }
-
-        .navigation {
-            margin-bottom: 15px;
-        }
-
-        .navigation a {
-            margin-right: 8px;
-        }
-
-        @media (max-width: 600px) {
-            .card {
-                padding: 16px;
-            }
-
-            h1 {
-                font-size: 25px;
-            }
-
-            th,
-            td {
-                padding: 8px;
-                font-size: 13px;
-            }
-        }
+    """ + STYLE + """
     </style>
 </head>
 
 <body>
-    <div class="card">
-        {{ content|safe }}
-    </div>
+<header>
+    <strong>BFT</strong>
+
+    <nav>
+        {% if current_user %}
+            <a href="{{ url_for('dashboard') }}">
+                Dashboard
+            </a>
+
+            {% if current_user_is_admin %}
+                <a href="{{ url_for('admin_dashboard') }}">
+                    Admin
+                </a>
+            {% endif %}
+
+            <a href="{{ url_for('logout') }}">
+                Log out
+            </a>
+        {% else %}
+            <a href="{{ url_for('login') }}">
+                Log in
+            </a>
+
+            <a href="{{ url_for('register') }}">
+                Register
+            </a>
+        {% endif %}
+    </nav>
+</header>
+
+<main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="notice {{ category }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endwith %}
+
+    """ + body + """
+</main>
 </body>
 </html>
 """
 
+    current = get_current_user()
 
-def page(template, **context):
-    content = render_template_string(
-        template,
-        **context,
-    )
+    values = {
+        "title": title,
+        "current_user": current,
+        "current_user_is_admin": is_admin(current),
+    }
 
-    return render_template_string(
-        PAGE,
-        content=content,
-    )
+    values.update(context)
+
+    return render_template_string(template, **values)
+
+
+# ==========================================
+# REGISTRATION FORM
+# ==========================================
+
+REGISTER_FORM = """
+<section class="card">
+    <h1>Create your BFT account</h1>
+
+    <form method="post">
+        <label for="full_name">Full name</label>
+        <input
+            id="full_name"
+            name="full_name"
+            maxlength="120"
+            required
+            value="{{ request.form.get('full_name', '') }}"
+        >
+
+        <label for="email">Email address</label>
+        <input
+            id="email"
+            name="email"
+            type="email"
+            maxlength="150"
+            required
+            value="{{ request.form.get('email', '') }}"
+        >
+
+        <label for="phone">Phone number</label>
+        <input
+            id="phone"
+            name="phone"
+            maxlength="40"
+            required
+            value="{{ request.form.get('phone', '') }}"
+        >
+
+        <label for="password">
+            Password (at least 8 characters)
+        </label>
+        <input
+            id="password"
+            name="password"
+            type="password"
+            minlength="8"
+            required
+        >
+
+        <label for="confirm_password">Confirm password</label>
+        <input
+            id="confirm_password"
+            name="confirm_password"
+            type="password"
+            minlength="8"
+            required
+        >
+
+        <label for="referral_code">
+            Referral code (optional)
+        </label>
+        <input
+            id="referral_code"
+            name="referral_code"
+            maxlength="30"
+            value="{{ request.form.get('referral_code', '') }}"
+        >
+
+        <p>
+            <button type="submit">Register</button>
+        </p>
+    </form>
+
+    <p>
+        Already registered?
+        <a href="{{ url_for('login') }}">Log in</a>.
+    </p>
+</section>
+"""
 
 
 # ==========================================
@@ -460,44 +526,40 @@ def page(template, **context):
 
 @app.route("/")
 def home():
-    user = current_user()
-
-    if user:
+    if get_current_user():
         return redirect(url_for("dashboard"))
 
-    return page("""
-        <h1>Welcome to BFT</h1>
+    return page(
+        "Home",
+        """
+        <section class="card">
+            <h1>Welcome to BFT</h1>
 
-        <p>
-            Your journey starts here.
-            Create an account to get started.
-        </p>
+            <p>
+                Create an account or log in to access
+                your dashboard.
+            </p>
 
-        <a class="btn" href="{{ url_for('register') }}">
-            Create an Account
-        </a>
+            <a class="button" href="{{ url_for('register') }}">
+                Create account
+            </a>
 
-        <a class="btn" href="{{ url_for('login') }}">
-            Log In
-        </a>
-    """)
+            <a class="button" href="{{ url_for('login') }}">
+                Log in
+            </a>
+        </section>
+        """,
+    )
 
 
 # ==========================================
-# REGISTRATION
+# REGISTER
 # ==========================================
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    message = ""
-
-    referral_from_url = request.args.get(
-        "ref",
-        "",
-    ).strip().upper()
-
     if request.method == "POST":
-        name = request.form.get(
+        full_name = request.form.get(
             "full_name",
             "",
         ).strip()
@@ -517,111 +579,101 @@ def register():
             "",
         )
 
-        referral = request.form.get(
+        confirm_password = request.form.get(
+            "confirm_password",
+            "",
+        )
+
+        referral_input = request.form.get(
             "referral_code",
             "",
-        ).strip().upper() or None
+        ).strip().upper()
 
-        if not name or not email or not phone or not password:
-            message = "Please complete all required fields."
+        referrer = None
+
+        if not all([full_name, email, phone, password]):
+            flash(
+                "Please complete all required fields.",
+                "error",
+            )
 
         elif len(password) < 8:
-            message = "Password must be at least 8 characters."
+            flash(
+                "Your password must be at least 8 characters long.",
+                "error",
+            )
+
+        elif password != confirm_password:
+            flash(
+                "The passwords do not match.",
+                "error",
+            )
 
         elif User.query.filter_by(email=email).first():
-            message = "This email is already registered."
-
-        elif referral and not User.query.filter_by(
-            referral_code=referral
-        ).first():
-            message = "That referral code is not valid."
+            flash(
+                "An account with that email already exists. Please log in.",
+                "error",
+            )
 
         else:
+            if referral_input:
+                referrer = User.query.filter_by(
+                    referral_code=referral_input
+                ).first()
+
+                if not referrer:
+                    flash(
+                        "That referral code was not found. Check it and try again.",
+                        "error",
+                    )
+                    return page("Register", REGISTER_FORM)
+
             user = User(
-                full_name=name,
+                full_name=full_name,
                 email=email,
                 phone=phone,
                 password_hash=generate_password_hash(password),
-                referral_code=generate_unique_referral_code(),
-                referred_by=referral,
+                referral_code=make_referral_code(),
+                referred_by=(
+                    referrer.referral_code
+                    if referrer
+                    else None
+                ),
             )
 
             try:
                 db.session.add(user)
                 db.session.commit()
 
-                return redirect(
-                    url_for("login", registered="1")
+                db.session.add(
+                    UserStatus(
+                        user_id=user.id,
+                        is_active=True,
+                    )
                 )
+                db.session.commit()
+
+                session.clear()
+                session.permanent = True
+                session["user_id"] = user.id
+
+                flash(
+                    "Your account has been created successfully.",
+                    "success",
+                )
+
+                return redirect(url_for("dashboard"))
 
             except Exception:
                 db.session.rollback()
-
                 app.logger.exception("Registration failed.")
 
-                message = (
-                    "Registration could not be completed. "
-                    "Please try again."
+                flash(
+                    "We could not create your account. Please try again.",
+                    "error",
                 )
 
-    return page("""
-        <h1>Create Account</h1>
-
-        <p class="error">{{ message }}</p>
-
-        <form method="post">
-            <label>Full Name</label>
-            <input
-                name="full_name"
-                required
-                maxlength="100"
-                placeholder="Full name"
-            >
-
-            <label>Email Address</label>
-            <input
-                name="email"
-                type="email"
-                required
-                maxlength="150"
-                placeholder="Email address"
-            >
-
-            <label>Phone Number</label>
-            <input
-                name="phone"
-                type="tel"
-                required
-                maxlength="30"
-                placeholder="Phone number"
-            >
-
-            <label>Password</label>
-            <input
-                name="password"
-                type="password"
-                required
-                minlength="8"
-                placeholder="At least 8 characters"
-            >
-
-            <label>Referral Code (Optional)</label>
-            <input
-                name="referral_code"
-                placeholder="Enter referral code"
-                value="{{ referral }}"
-            >
-
-            <button type="submit">Register</button>
-        </form>
-
-        <p>
-            Already have an account?
-            <a href="{{ url_for('login') }}">Log in</a>
-        </p>
-
-        <a href="{{ url_for('home') }}">Home</a>
-    """, message=message, referral=referral_from_url)
+    return page("Register", REGISTER_FORM)
 
 
 # ==========================================
@@ -630,11 +682,6 @@ def register():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    message = ""
-
-    if request.args.get("registered"):
-        message = "Account created. You can now log in."
-
     if request.method == "POST":
         email = request.form.get(
             "email",
@@ -653,61 +700,62 @@ def login():
             password,
         ):
             if not user_is_active(user):
-                return page("""
-                    <h1>Account Inactive</h1>
+                flash(
+                    "Your account is deactivated. Please contact the administrator.",
+                    "error",
+                )
+            else:
+                session.clear()
+                session.permanent = True
+                session["user_id"] = user.id
 
-                    <p class="error">
-                        Your account is inactive.
-                        Please contact the administrator.
-                    </p>
+                flash("Welcome back.", "success")
 
-                    <a class="btn" href="{{ url_for('login') }}">
-                        Back to Login
-                    </a>
-                """), 403
+                return redirect(url_for("dashboard"))
 
-            session.clear()
-            session.permanent = True
-            session["user_id"] = user.id
+        else:
+            flash(
+                "The email or password is incorrect.",
+                "error",
+            )
 
-            return redirect(url_for("dashboard"))
-
-        message = "Incorrect email or password."
-
-    return page("""
-        <h1>Log In</h1>
-
-        <p class="success">{{ message }}</p>
+    body = """
+    <section class="card">
+        <h1>Log in</h1>
 
         <form method="post">
-            <label>Email Address</label>
+            <label for="email">Email address</label>
             <input
+                id="email"
                 name="email"
                 type="email"
                 required
-                placeholder="Email address"
+                value="{{ request.form.get('email', '') }}"
             >
 
-            <label>Password</label>
+            <label for="password">Password</label>
             <input
+                id="password"
                 name="password"
                 type="password"
                 required
-                placeholder="Password"
             >
 
-            <button type="submit">Log In</button>
+            <p>
+                <button type="submit">Log in</button>
+            </p>
         </form>
 
         <p>
-            Don't have an account?
+            New here?
             <a href="{{ url_for('register') }}">
-                Register here
-            </a>
+                Create an account
+            </a>.
         </p>
+    </section>
+    """
 
-        <a href="{{ url_for('home') }}">Home</a>
-    """, message=message)
+    return page("Log in", body)
 
 
 # ==========================================
@@ -715,97 +763,101 @@ def login():
 # ==========================================
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
-    user = current_user()
-
-    if user is None:
-        return redirect(url_for("login"))
-
-    if not user.referral_code:
-        user.referral_code = generate_unique_referral_code()
-        db.session.commit()
-
-    referral_link = url_for(
-        "register",
-        ref=user.referral_code,
-        _external=True,
-    )
+    user = get_current_user()
 
     referral_count = User.query.filter_by(
         referred_by=user.referral_code
     ).count()
 
-    return page("""
-        <h1>Welcome, {{ user.full_name }}</h1>
+    referral_link = url_for(
+        "register",
+        _external=True,
+    ) + "?ref=" + user.referral_code
 
-        <p>Your BFT dashboard</p>
+    body = """
+    <section class="card">
+        <h1>Hello, {{ user.full_name }}!</h1>
 
-        <div class="profile-item">
-            <strong>Email:</strong> {{ user.email }}
+        <p>Welcome to your BFT dashboard.</p>
+
+        <p>
+            <strong>Email:</strong>
+            {{ user.email }}
+        </p>
+
+        <p>
+            <strong>Phone:</strong>
+            {{ user.phone }}
+        </p>
+
+        <p>
+            <strong>Your referral code:</strong>
+            <code>{{ user.referral_code }}</code>
+        </p>
+
+        {% if user.referred_by %}
+            <p>
+                <strong>Referred by code:</strong>
+                {{ user.referred_by }}
+            </p>
+        {% endif %}
+
+        <div class="card">
+            <h2>Your referrals</h2>
+            <p>
+                People registered with your referral code:
+                <strong>{{ referral_count }}</strong>
+            </p>
+
+            <label for="referral_link">
+                Your referral link
+            </label>
+
+            <input
+                id="referral_link"
+                value="{{ referral_link }}"
+                readonly
+                onclick="this.select()"
+            >
+
+            <p class="muted">
+                Share this link with people you invite to BFT.
+            </p>
         </div>
 
-        <div class="profile-item">
-            <strong>Phone:</strong> {{ user.phone }}
-        </div>
-
-        <div class="profile-item">
-            <strong>Your Referral Code:</strong>
-            {{ user.referral_code }}
-        </div>
-
-        <div class="profile-item">
-            <strong>People Referred:</strong>
-            {{ referral_count }}
-        </div>
-
-        <h2>Your Referral Link</h2>
-
-        <p>Share this link with people you invite to BFT.</p>
-
-        <input
-            value="{{ referral_link }}"
-            readonly
-            onclick="this.select()"
-        >
-
-        <div class="navigation">
-            <a class="btn" href="{{ url_for('edit_profile') }}">
-                Edit My Profile
+        <p>
+            <a class="button" href="{{ url_for('edit_profile') }}">
+                Edit my profile
             </a>
+        </p>
+    </section>
+    """
 
-            {% if is_admin_user(user) %}
-                <a class="btn" href="{{ url_for('admin_dashboard') }}">
-                    Admin Dashboard
-                </a>
-            {% endif %}
-
-            <a class="btn" href="{{ url_for('logout') }}">
-                Log Out
-            </a>
-        </div>
-    """,
+    return page(
+        "Dashboard",
+        body,
         user=user,
         referral_count=referral_count,
         referral_link=referral_link,
-        is_admin_user=is_admin_user,
     )
 
 
 # ==========================================
-# EDIT OWN PROFILE
+# EDIT YOUR OWN PROFILE
 # ==========================================
 
 @app.route("/profile/edit", methods=["GET", "POST"])
+@login_required
 def edit_profile():
-    user = current_user()
+    user = get_current_user()
 
     if user is None:
         return redirect(url_for("login"))
 
-    message = ""
-
     if request.method == "POST":
-        name = request.form.get(
+        full_name = request.form.get(
             "full_name",
             "",
         ).strip()
@@ -815,307 +867,67 @@ def edit_profile():
             "",
         ).strip()
 
-        if not name or not phone:
-            message = "Name and phone number are required."
+        if not full_name or not phone:
+            flash(
+                "Name and phone number are required.",
+                "error",
+            )
 
-        elif len(name) > 100 or len(phone) > 30:
-            message = "The name or phone number is too long."
+        elif len(full_name) > 120 or len(phone) > 40:
+            flash(
+                "The name or phone number is too long.",
+                "error",
+            )
 
         else:
-            user.full_name = name
+            user.full_name = full_name
             user.phone = phone
 
             try:
                 db.session.commit()
+
+                flash(
+                    "Your profile has been updated.",
+                    "success",
+                )
+
                 return redirect(url_for("dashboard"))
 
             except Exception:
                 db.session.rollback()
-
                 app.logger.exception("Profile update failed.")
 
-                message = "Unable to update your profile."
+                flash(
+                    "Unable to update your profile. Please try again.",
+                    "error",
+                )
 
-    return page("""
-        <h1>Edit My Profile</h1>
-
-        <p class="error">{{ message }}</p>
+    body = """
+    <section class="card">
+        <h1>Edit my profile</h1>
 
         <form method="post">
-            <label>Full Name</label>
+            <label for="full_name">Full name</label>
             <input
+                id="full_name"
                 name="full_name"
-                value="{{ user.full_name }}"
-                maxlength="100"
+                maxlength="120"
                 required
+                value="{{ request.form.get('full_name', user.full_name) }}"
             >
 
-            <label>Email Address</label>
-            <input value="{{ user.email }}" readonly>
-
-            <p>Your email address cannot be changed here.</p>
-
-            <label>Phone Number</label>
+            <label for="email">Email address</label>
             <input
-                name="phone"
-                value="{{ user.phone }}"
-                maxlength="30"
-                required
+                id="email"
+                value="{{ user.email }}"
+                readonly
             >
 
-            <button type="submit">Save Changes</button>
-        </form>
+            <p class="muted">
+                Your email address cannot be changed here.
+            </p>
 
-        <a class="btn" href="{{ url_for('dashboard') }}">
-            Back to Dashboard
-        </a>
-    """, user=user, message=message)
-
-
-# ==========================================
-# ADMIN DASHBOARD
-# ==========================================
-
-@app.route("/admin")
-@admin_required
-def admin_dashboard():
-    search = request.args.get(
-        "search",
-        "",
-    ).strip()
-
-    query = User.query
-
-    if search:
-        term = f"%{search}%"
-
-        query = query.filter(
-            or_(
-                User.full_name.ilike(term),
-                User.email.ilike(term),
-                User.phone.ilike(term),
-                User.referral_code.ilike(term),
-            )
-        )
-
-    users = query.order_by(User.id.desc()).all()
-    all_users = User.query.all()
-
-    total_users = len(all_users)
-
-    active_users = sum(
-        1 for user in all_users
-        if user_is_active(user)
-    )
-
-    inactive_users = total_users - active_users
-
-    return page("""
-        <h1>Admin Dashboard</h1>
-
-        <p>Manage BFT registered users.</p>
-
-        <div class="s
-        
-# ==========================================
-# ADMIN DASHBOARD
-# ==========================================
-
-@app.route("/admin")
-@admin_required
-def admin_dashboard():
-    search = request.args.get("search", "").strip()
-    query = User.query
-
-    if search:
-        term = f"%{search}%"
-        query = query.filter(
-            or_(
-                User.full_name.ilike(term),
-                User.email.ilike(term),
-                User.phone.ilike(term),
-                User.referral_code.ilike(term),
-            )
-        )
-
-    users = query.order_by(User.id.desc()).all()
-    all_users = User.query.all()
-
-    total_users = len(all_users)
-    active_users = sum(
-        1 for user in all_users if user_is_active(user)
-    )
-    inactive_users = total_users - active_users
-
-    return page("""
-        <h1>Admin Dashboard</h1>
-
-        <p>Manage BFT registered users.</p>
-
-        <div class="stats">
-            <div class="stat">
-                <strong>{{ total_users }}</strong>
-                Total Users
-            </div>
-            <div class="stat">
-                <strong>{{ active_users }}</strong>
-                Active Users
-            </div>
-            <div class="stat">
-                <strong>{{ inactive_users }}</strong>
-                Inactive Users
-            </div>
-        </div>
-
-        <h2>Search Users</h2>
-
-        <form method="get" action="{{ url_for('admin_dashboard') }}">
+            <label for="phone">Phone number</label>
             <input
-                type="text"
-                name="search"
-                value="{{ search }}"
-                placeholder="Search by name, email, phone or referral code"
-            >
-            <button type="submit">Search</button>
-        </form>
-
-        <p>Total matching users: {{ users|length }}</p>
-
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Referral Code</th>
-                        <th>Referred By</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for person in users %}
-                    <tr>
-                        <td>{{ person.id }}</td>
-                        <td>{{ person.full_name }}</td>
-                        <td>{{ person.email }}</td>
-                        <td>{{ person.phone }}</td>
-                        <td>{{ person.referral_code }}</td>
-                        <td>{{ person.referred_by or "None" }}</td>
-
-                        <td>
-                            {% if user_is_active(person) %}
-                                <span class="status-active">Active</span>
-                            {% else %}
-                                <span class="status-inactive">Inactive</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if user_is_active(person) %}
-                                <form
-                                    class="action-form"
-                                    method="post"
-                                    action="{{ url_for('deactivate_user', user_id=person.id) }}"
-                                    onsubmit="return confirm('Deactivate this account?');"
-                                >
-                                    <button class="danger" type="submit">
-                                        Deactivate
-                                    </button>
-                                </form>
-                            {% else %}
-                                <form
-                                    class="action-form"
-                                    method="post"
-                                    action="{{ url_for('activate_user', user_id=person.id) }}"
-                                    onsubmit="return confirm('Activate this account?');"
-                                >
-                                    <button class="success-button" type="submit">
-                                        Activate
-                                    </button>
-                                </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="8">No users found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <p>
-            <a class="btn" href="{{ url_for('dashboard') }}">
-                Back to Dashboard
-            </a>
-            <a class="btn" href="{{ url_for('logout') }}">
-                Log Out
-            </a>
-        </p>
-    """,
-        search=search,
-        users=users,
-        total_users=total_users,
-        active_users=active_users,
-        inactive_users=inactive_users,
-        user_is_active=user_is_active,
-    )
-
-
-# ==========================================
-# ACTIVATE USER
-# ==========================================
-
-@app.route("/admin/activate/<int:user_id>", methods=["POST"])
-@admin_required
-def activate_user(user_id):
-    user = db.session.get(User, user_id)
-
-    if user is None:
-        return "User not found", 404
-
-    set_user_active(user, True)
-    return redirect(url_for("admin_dashboard"))
-
-
-# ==========================================
-# DEACTIVATE USER
-# ==========================================
-
-@app.route("/admin/deactivate/<int:user_id>", methods=["POST"])
-@admin_required
-def deactivate_user(user_id):
-    admin = current_user()
-    user = db.session.get(User, user_id)
-
-    if user is None:
-        return "User not found", 404
-
-    if user.id == admin.id:
-        return "You cannot deactivate your own account.", 400
-
-    set_user_active(user, False)
-    return redirect(url_for("admin_dashboard"))
-
-
-# ==========================================
-# LOG OUT
-# ==========================================
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("home"))
-
-
-# ==========================================
-# START APPLICATION
-# ==========================================
-
-if __name__ == "__main__":
-    app.run(debug=False)
+                id="phone"
+           
