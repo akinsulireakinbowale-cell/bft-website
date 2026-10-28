@@ -947,3 +947,18 @@ def edit_profile():
     """
 
     return page("Edit Profile", body, user=user)
+
+# ==========================================
+# USER LOGOUT
+# ==========================================
+
+@app.route("/logout")
+def logout():
+    session.clear()
+
+    flash(
+        "You have been logged out successfully.",
+        "success",
+    )
+
+    return redirect(url_for("home"))
