@@ -94,12 +94,10 @@ class User(db.Model):
 
 
 class UserStatus(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-
     user_id = db.Column(
         db.Integer,
         db.ForeignKey("user.id"),
-        unique=True,
+        primary_key=True,
         nullable=False,
     )
 
