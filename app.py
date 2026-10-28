@@ -396,7 +396,7 @@ def page(title, body, **context):
             </a>
 
                         {% if current_user_is_admin %}
-                <span>Administrator</span>
+                <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
             {% endif %}
 
             <a href="{{ url_for('logout') }}">
