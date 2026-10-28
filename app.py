@@ -1,7 +1,7 @@
 import os
 import secrets
 import string
-from functools import wraps
+from datetime import datetime
 
 from flask import (
     Flask,
@@ -92,7 +92,107 @@ class User(db.Model):
         nullable=True,
     )
 
+# ==========================================
+# WALLET MODEL
+# ==========================================
 
+class Wallet(db.Model):
+    id = db.Column(
+        db.Integer,
+        primary_key=True,
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    balance = db.Column(
+        db.Numeric(12, 2),
+        nullable=False,
+        default=0,
+    )
+
+    currency = db.Column(
+        db.String(3),
+        nullable=False,
+        default="NGN",
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+
+# ==========================================
+# WALLET TRANSACTION MODEL
+# ==========================================
+
+class WalletTransaction(db.Model):
+    id = db.Column(
+        db.Integer,
+        primary_key=True,
+    )
+
+    wallet_id = db.Column(
+        db.Integer,
+        db.ForeignKey("wallet.id"),
+        nullable=False,
+        index=True,
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        index=True,
+    )
+
+    transaction_type = db.Column(
+        db.String(20),
+        nullable=False,
+    )
+
+    amount = db.Column(
+        db.Numeric(12, 2),
+        nullable=False,
+    )
+
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="pending",
+    )
+
+    reference = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=True,
+    )
+
+    description = db.Column(
+        db.String(255),
+        nullable=False,
+        default="",
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+)
 class UserStatus(db.Model):
     user_id = db.Column(
         db.Integer,
