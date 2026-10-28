@@ -1294,3 +1294,12 @@ def logout():
     )
 
     return redirect(url_for("home"))
+
+==========================================
+
+DATABASE INITIALIZATION
+
+==========================================
+
+with app.app_context():
+db.create_all()
