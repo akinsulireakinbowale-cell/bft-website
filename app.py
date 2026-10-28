@@ -916,6 +916,7 @@ def admin_dashboard():
         <p>Manage BFT registered users.</p>
 
         <div class="s
+        
 # ==========================================
 # ADMIN DASHBOARD
 # ==========================================
@@ -924,12 +925,10 @@ def admin_dashboard():
 @admin_required
 def admin_dashboard():
     search = request.args.get("search", "").strip()
-
     query = User.query
 
     if search:
         term = f"%{search}%"
-
         query = query.filter(
             or_(
                 User.full_name.ilike(term),
@@ -943,12 +942,9 @@ def admin_dashboard():
     all_users = User.query.all()
 
     total_users = len(all_users)
-
     active_users = sum(
-        1 for user in all_users
-        if user_is_active(user)
+        1 for user in all_users if user_is_active(user)
     )
-
     inactive_users = total_users - active_users
 
     return page("""
@@ -961,12 +957,10 @@ def admin_dashboard():
                 <strong>{{ total_users }}</strong>
                 Total Users
             </div>
-
             <div class="stat">
                 <strong>{{ active_users }}</strong>
                 Active Users
             </div>
-
             <div class="stat">
                 <strong>{{ inactive_users }}</strong>
                 Inactive Users
@@ -1059,7 +1053,6 @@ def admin_dashboard():
             <a class="btn" href="{{ url_for('dashboard') }}">
                 Back to Dashboard
             </a>
-
             <a class="btn" href="{{ url_for('logout') }}">
                 Log Out
             </a>
@@ -1087,7 +1080,6 @@ def activate_user(user_id):
         return "User not found", 404
 
     set_user_active(user, True)
-
     return redirect(url_for("admin_dashboard"))
 
 
@@ -1108,7 +1100,6 @@ def deactivate_user(user_id):
         return "You cannot deactivate your own account.", 400
 
     set_user_active(user, False)
-
     return redirect(url_for("admin_dashboard"))
 
 
