@@ -19,9 +19,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # APP CONFIGURATION
 # ==========================================
 
-app = Flask(__name__)
+app = Flask(name)
 
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+app.config.update(
+SECRET_KEY=os.environ.get("SECRET_KEY"),
+SESSION_COOKIE_HTTPONLY=True,
+SESSION_COOKIE_SAMESITE="Lax",
+SESSION_COOKIE_SECURE=True,
+PERMANENT_SESSION_LIFETIME=1800,
+)
 
 if not app.config["SECRET_KEY"]:
     raise RuntimeError("Please set the SECRET_KEY environment variable.")
