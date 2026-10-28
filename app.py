@@ -902,7 +902,7 @@ def edit_profile():
                     "error",
                 )
 
-    body = """
+    body =     """
     <section class="card">
         <h1>Edit my profile</h1>
 
