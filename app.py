@@ -28,9 +28,25 @@ from werkzeug.security import (
 
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = os.environ.get(
-    "SECRET_KEY",
-    "change-this-secret-key",
+secret_key = os.environ.get("SECRET_KEY")
+
+if not secret_key:
+    raise RuntimeError(
+        "Please set the SECRET_KEY environment variable."
+    )
+
+app.config.update(
+    SECRET_KEY=secret_key,
+
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+
+    SESSION_COOKIE_SECURE=(
+        os.environ.get("COOKIE_SECURE", "true").lower()
+        == "true"
+    ),
+
+    PERMANENT_SESSION_LIFETIME=1800,
 )
 
 database_url = os.environ.get(
