@@ -1392,6 +1392,14 @@ def admin_dashboard():
             <a href="{{ url_for('admin_dashboard') }}">Clear</a>
         </form>
 
+<h2>Deposit Management</h2>
+
+<p>
+    <a class="button" href="{{ url_for('admin_deposits') }}">
+        View Deposit Requests
+    </a>
+</p>
+
         <h2>Registered Users</h2>
 
         {% for member in users %}
