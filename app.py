@@ -1885,9 +1885,39 @@ def admin_withdrawals():
                     </p>
 
                     <p>
-                        <strong>Date:</strong>
+                        <strong>Requested:</strong>
                         {{ withdrawal.created_at }}
                     </p>
+
+                    {% if withdrawal.status == "pending" %}
+                        <form
+                            method="post"
+                            action="{{ url_for(
+                                'admin_review_withdrawal',
+                                withdrawal_id=withdrawal.id
+                            ) }}"
+                            onsubmit="return confirm(
+                                'Confirm that you have verified this request. ' +
+                                'Approving will deduct the amount from the wallet.'
+                            );"
+                        >
+                            <button
+                                type="submit"
+                                name="decision"
+                                value="approve"
+                            >
+                                Approve &amp; Mark Paid
+                            </button>
+
+                            <button
+                                type="submit"
+                                name="decision"
+                                value="reject"
+                            >
+                                Reject Withdrawal
+                            </button>
+                        </form>
+                    {% endif %}
                 </div>
             {% endfor %}
         {% else %}
@@ -1909,84 +1939,131 @@ def admin_withdrawals():
         withdrawals=withdrawals,
     )
 
-# ==========================================
-# ADMIN: EDIT USER
-# ==========================================
-
-@app.route("/admin/users/<int:user_id>/edit", methods=["GET", "POST"])
+@app.route(
+    "/admin/withdrawals/<int:withdrawal_id>/review",
+    methods=["POST"],
+)
 @admin_required
-def admin_edit_user(user_id):
-    target = db.session.get(User, user_id)
+def admin_review_withdrawal(withdrawal_id):
+    decision = request.form.get("decision", "").strip()
 
-    if target is None:
-        flash("User not found.", "error")
-        return redirect(url_for("admin_dashboard"))
+    if decision not in ("approve", "reject"):
+        flash("Invalid withdrawal decision.")
+        return redirect(url_for("admin_withdrawals"))
 
-    if request.method == "POST":
-        full_name = request.form.get("full_name", "").strip()
-        phone = request.form.get("phone", "").strip()
-
-        if not full_name or not phone:
-            flash("Name and phone number are required.", "error")
-
-        elif len(full_name) > 120 or len(phone) > 40:
-            flash("The name or phone number is too long.", "error")
-
-        else:
-            try:
-                target.full_name = full_name
-                target.phone = phone
-
-                db.session.commit()
-
-                flash("User details updated successfully.", "success")
-                return redirect(url_for("admin_dashboard"))
-
-            except Exception:
-                db.session.rollback()
-                app.logger.exception("Admin user update failed.")
-                flash("Unable to update the user. Please try again.", "error")
-
-    body = """
-    <section class="card">
-        <h1>Edit User</h1>
-
-        <p><strong>Email:</strong> {{ target.email }}</p>
-
-        <form method="post">
-            <label for="full_name">Full name</label>
-            <input
-                id="full_name"
-                name="full_name"
-                maxlength="120"
-                required
-                value="{{ request.form.get('full_name', target.full_name) }}"
-            >
-
-            <label for="phone">Phone number</label>
-            <input
-                id="phone"
-                name="phone"
-                maxlength="40"
-                required
-                value="{{ request.form.get('phone', target.phone or '') }}"
-            >
-
-            <button type="submit">Save Changes</button>
-
-            <a href="{{ url_for('admin_dashboard') }}">
-                Cancel
-            </a>
-        </form>
-    </section>
-    """
-
-    return page(
-        "Edit User",
-        body,
-        target=target,
-        user=get_current_user(),
+    try:
+        # Lock the withdrawal row to prevent simultaneous processing.
+        withdrawal = (
+            WithdrawalRequest.query
+            .filter_by(id=withdrawal_id)
+            .with_for_update()
+            .first()
         )
+
+        if withdrawal is None:
+            flash("Withdrawal request not found.")
+            return redirect(url_for("admin_withdrawals"))
+
+        # A completed or rejected request cannot be processed again.
+        if withdrawal.status != "pending":
+            flash("This withdrawal has already been reviewed.")
+            return redirect(url_for("admin_withdrawals"))
+
+        if decision == "reject":
+            withdrawal.status = "rejected"
+            withdrawal.reviewed_at = datetime.utcnow()
+            withdrawal.admin_note = "Rejected by administrator."
+
+            db.session.commit()
+
+            flash("Withdrawal rejected. The wallet was not debited.")
+            return redirect(url_for("admin_withdrawals"))
+
+        # Lock the user's wallet before checking and changing the balance.
+        wallet = (
+            Wallet.query
+            .filter_by(user_id=withdrawal.user_id)
+            .with_for_update()
+            .first()
+        )
+
+        if wallet is None:
+            db.session.rollback()
+            flash("This user does not have a wallet.")
+            return redirect(url_for("admin_withdrawals"))
+
+        amount = Decimal(str(withdrawal.amount))
+        balance = Decimal(str(wallet.balance))
+
+        if amount <= 0:
+            db.session.rollback()
+            flash("Invalid withdrawal amount.")
+            return redirect(url_for("admin_withdrawals"))
+
+        # Check for an existing transaction to prevent duplicate deductions.
+        transaction_reference = f"withdrawal-{withdrawal.id}"
+
+        existing_transaction = WalletTransaction.query.filter_by(
+            reference=transaction_reference
+        ).first()
+
+        if existing_transaction is not None:
+            db.session.rollback()
+            flash(
+                "A transaction already exists for this withdrawal. "
+                "Please check the transaction history."
+            )
+            return redirect(url_for("admin_withdrawals"))
+
+        # Recheck the current wallet balance before deducting.
+        if balance < amount:
+            db.session.rollback()
+            flash(
+                "Insufficient wallet balance. "
+                "The withdrawal was not processed."
+            )
+            return redirect(url_for("admin_withdrawals"))
+
+        # Deduct the amount and record the transaction together.
+        wallet.balance = balance - amount
+        wallet.updated_at = datetime.utcnow()
+
+        transaction = WalletTransaction(
+            wallet_id=wallet.id,
+            user_id=withdrawal.user_id,
+            transaction_type="withdrawal",
+            amount=amount,
+            status="completed",
+            reference=transaction_reference,
+            description=f"Withdrawal #{withdrawal.id} paid",
+        )
+
+        db.session.add(transaction)
+
+        withdrawal.status = "approved"
+        withdrawal.reviewed_at = datetime.utcnow()
+        withdrawal.admin_note = (
+            "Payment verified by administrator; "
+            "wallet deduction recorded."
+        )
+
+        # Commit the wallet deduction, transaction and status together.
+        db.session.commit()
+
+        flash(
+            "Withdrawal marked paid. "
+            "Wallet deducted and transaction recorded."
+        )
+
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Withdrawal processing failed.")
+        flash(
+            "Withdrawal processing failed. "
+            "Check the application logs before retrying."
+        )
+
+    return redirect(url_for("admin_withdrawals"))
 
 # ==========================================
 # ADMIN: DEACTIVATE USER
