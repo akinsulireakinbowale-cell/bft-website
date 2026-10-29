@@ -881,7 +881,7 @@ def dashboard():
         _external=True,
     ) + "?ref=" + user.referral_code
 
-       body = """
+    body = """
     <section class="card">
         <h1>Hello, {{ user.full_name }}!</h1>
 
