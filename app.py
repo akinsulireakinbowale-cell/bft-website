@@ -881,45 +881,26 @@ def dashboard():
         _external=True,
     ) + "?ref=" + user.referral_code
 
-    body = """
+       body = """
     <section class="card">
         <h1>Hello, {{ user.full_name }}!</h1>
 
         <p>Welcome to your BFT dashboard.</p>
 
+        <h3>Your Referral Information</h3>
+
         <p>
-            <strong>Email:</strong>
-            {{ user.email }}
+            <strong>Referral Code:</strong>
+            {{ user.referral_code }}
         </p>
 
         <p>
-            <strong>Phone:</strong>
-            {{ user.phone }}
+            <strong>Total Referrals:</strong>
+            {{ referral_count }}
         </p>
 
-        <p>
-            <strong>Your referral code:</strong>
-            <code>{{ user.referral_code }}</code>
-        </p>
-
-        {% if user.referred_by %}
-            <p>
-                <strong>Referred by code:</strong>
-                {{ user.referred_by }}
-            </p>
-        {% endif %}
-
-        <div class="card">
-            <h2>Your referrals</h2>
-
-            <p>
-                People registered with your referral code:
-                <strong>{{ referral_count }}</strong>
-            </p>
-
-            <label for="referral_link">
-                Your referral link
-            </label>
+        <div>
+            <label for="referral_link">Your Referral Link</label>
 
             <input
                 id="referral_link"
@@ -935,15 +916,7 @@ def dashboard():
 
         <p>
             <a class="button" href="{{ url_for('edit_profile') }}">
-                Edit my profile
-            </a>
-        </p>
-    </section>
-    """
-
-            <p>
-            <a class="button" href="{{ url_for('edit_profile') }}">
-                Edit my profile
+                Edit My Profile
             </a>
         </p>
 
@@ -953,7 +926,7 @@ def dashboard():
             </a>
         </p>
     </section>
-    """
+    """ 
     
     return page(
         "Dashboard",
