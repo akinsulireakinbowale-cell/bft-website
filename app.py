@@ -2,8 +2,8 @@ import os
 import secrets
 import string
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from functools import wraps
-request.method
 
 from flask import (
     Flask,
