@@ -986,6 +986,12 @@ def my_wallet():
     </a>
 </p>
 
+<p>
+    <a class="button" href="{{ url_for('request_withdrawal') }}">
+        Withdraw Funds
+    </a>
+</p>
+
         <p class="muted">
             Your wallet balance is displayed in Nigerian naira.
         </p>
