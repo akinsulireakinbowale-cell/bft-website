@@ -1392,14 +1392,6 @@ def admin_dashboard():
             <a href="{{ url_for('admin_dashboard') }}">Clear</a>
         </form>
 
-<h2>Deposit Management</h2>
-
-<p>
-    <a class="button" href="{{ url_for('admin_deposits') }}">
-        View Deposit Requests
-    </a>
-</p>
-
         <h2>Registered Users</h2>
 
         {% for member in users %}
@@ -1453,6 +1445,84 @@ def admin_dashboard():
         inactive_users=inactive_users,
         user_is_active=user_is_active,
     )
+
+# ==========================================
+# ADMIN DEPOSIT MANAGEMENT
+# ==========================================
+
+@app.route("/admin/deposits")
+@admin_required
+def admin_deposits():
+    deposits = DepositRequest.query.order_by(
+        DepositRequest.created_at.desc()
+    ).all()
+
+    body = """
+    <section class="card">
+        <h1>Deposit Management</h1>
+
+        {% if deposits %}
+            {% for deposit in deposits %}
+                <div class="card">
+                    <h3>Deposit #{{ deposit.id }}</h3>
+
+                    <p><strong>User ID:</strong> {{ deposit.user_id }}</p>
+                    <p><strong>Amount:</strong> NGN {{ "%.2f"|format(deposit.amount) }}</p>
+                    <p><strong>Sender:</strong> {{ deposit.sender_name }}</p>
+                    <p><strong>Reference:</strong> {{ deposit.payment_reference }}</p>
+                    <p><strong>Status:</strong> {{ deposit.status|title }}</p>
+
+                    {% if deposit.status == "pending" %}
+                        <form method="post"
+                              action="{{ url_for('admin_review_deposit', deposit_id=deposit.id) }}">
+                            <button type="submit" name="decision" value="approve">
+                                Approve Verified Deposit
+                            </button>
+
+                            <button type="submit" name="decision" value="reject">
+                                Reject Deposit
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No deposit requests yet.</p>
+        {% endif %}
+
+        <p>
+            <a class="button" href="{{ url_for('admin_dashboard') }}">
+                Back to Admin Dashboard
+            </a>
+        </p>
+    </section>
+    """
+
+    return page(
+        "Deposit Management",
+        body,
+        deposits=deposits,
+    )
+
+
+@app.route(
+    "/admin/deposits/<int:deposit_id>/review",
+    methods=["POST"],
+)
+@admin_required
+def admin_review_deposit(deposit_id):
+    decision = request.form.get("decision", "").strip()
+
+    if decision not in ("approve", "reject"):
+        flash("Invalid deposit decision.")
+        return redirect(url_for("admin_deposits"))
+
+    flash(
+        "The review route is registered, but deposit approval "
+        "processing must be added and tested before use."
+    )
+
+    return redirect(url_for("admin_deposits"))
 
 # ==========================================
 # ADMIN: EDIT USER
