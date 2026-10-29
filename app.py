@@ -1185,6 +1185,173 @@ def deposit_funds():
 
     return page("Deposit Funds", body, user=user)
 
+@app.route("/withdraw", methods=["GET", "POST"])
+@login_required
+def request_withdrawal():
+    user = get_current_user()
+
+    if user is None:
+        return redirect(url_for("login"))
+
+    wallet = Wallet.query.filter_by(user_id=user.id).first()
+
+    if wallet is None:
+        flash("Your wallet is not available yet.")
+        return redirect(url_for("my_wallet"))
+
+    if request.method == "POST":
+        amount_text = request.form.get("amount", "").strip()
+        bank_name = request.form.get("bank_name", "").strip()
+        account_name = request.form.get("account_name", "").strip()
+        account_number = request.form.get("account_number", "").strip()
+
+        if not all([
+            amount_text,
+            bank_name,
+            account_name,
+            account_number,
+        ]):
+            flash("Please complete all withdrawal fields.")
+            return redirect(url_for("request_withdrawal"))
+
+        try:
+            amount = Decimal(amount_text)
+        except InvalidOperation:
+            flash("Please enter a valid withdrawal amount.")
+            return redirect(url_for("request_withdrawal"))
+
+        if not amount.is_finite() or amount <= 0:
+            flash("The withdrawal amount must be greater than zero.")
+            return redirect(url_for("request_withdrawal"))
+
+        if amount.as_tuple().exponent < -2:
+            flash("Use no more than two decimal places.")
+            return redirect(url_for("request_withdrawal"))
+
+        if len(bank_name) > 120 or len(account_name) > 120:
+            flash("One of the bank details is too long.")
+            return redirect(url_for("request_withdrawal"))
+
+        if len(account_number) > 30:
+            flash("Please check the account number.")
+            return redirect(url_for("request_withdrawal"))
+
+        if not account_number.isdigit():
+            flash("The account number must contain digits only.")
+            return redirect(url_for("request_withdrawal"))
+
+        pending_total = db.session.query(
+            db.func.coalesce(
+                db.func.sum(WithdrawalRequest.amount),
+                0,
+            )
+        ).filter_by(
+            user_id=user.id,
+            status="pending",
+        ).scalar()
+
+        available_balance = (
+            Decimal(str(wallet.balance))
+            - Decimal(str(pending_total))
+        )
+
+        if amount > available_balance:
+            flash(
+                "Your request exceeds the available balance "
+                "after pending withdrawals."
+            )
+            return redirect(url_for("request_withdrawal"))
+
+        withdrawal = WithdrawalRequest(
+            user_id=user.id,
+            amount=amount,
+            bank_name=bank_name,
+            account_name=account_name,
+            account_number=account_number,
+            status="pending",
+        )
+
+        db.session.add(withdrawal)
+        db.session.commit()
+
+        flash(
+            "Your withdrawal request has been submitted "
+            "and is awaiting administrator review."
+        )
+        return redirect(url_for("my_wallet"))
+
+    body = """
+    <section class="card">
+        <h1>Request Withdrawal</h1>
+
+        <p>
+            <strong>Wallet balance:</strong>
+            NGN {{ "%.2f"|format(wallet.balance) }}
+        </p>
+
+        <p>
+            Pending withdrawals are deducted from the amount
+            available for new requests. Your wallet will only
+            be debited when an approved withdrawal is processed.
+        </p>
+
+        <form method="post">
+            <label for="amount">Withdrawal Amount (NGN)</label>
+            <input
+                type="number"
+                id="amount"
+                name="amount"
+                min="0.01"
+                step="0.01"
+                required
+            >
+
+            <label for="bank_name">Bank Name</label>
+            <input
+                type="text"
+                id="bank_name"
+                name="bank_name"
+                maxlength="120"
+                required
+            >
+
+            <label for="account_name">Account Name</label>
+            <input
+                type="text"
+                id="account_name"
+                name="account_name"
+                maxlength="120"
+                required
+            >
+
+            <label for="account_number">Account Number</label>
+            <input
+                type="text"
+                id="account_number"
+                name="account_number"
+                inputmode="numeric"
+                maxlength="30"
+                required
+            >
+
+            <button type="submit">Submit Withdrawal Request</button>
+        </form>
+
+        <p>
+            <a class="button" href="{{ url_for('my_wallet') }}">
+                Back to My Wallet
+            </a>
+        </p>
+    </section>
+    """
+
+    return page(
+        "Request Withdrawal",
+        body,
+        user=user,
+        wallet=wallet,
+    )
+
 # ==========================================
 # DEPOSIT REQUEST MODEL
 # ==========================================
