@@ -1043,6 +1043,60 @@ def my_wallet():
     )
 
 # ==========================================
+# DEPOSIT REQUEST MODEL
+# ==========================================
+
+class DepositRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        index=True,
+    )
+
+    amount = db.Column(
+        db.Numeric(12, 2),
+        nullable=False,
+    )
+
+    sender_name = db.Column(
+        db.String(120),
+        nullable=False,
+    )
+
+    payment_reference = db.Column(
+        db.String(100),
+        nullable=False,
+        unique=True,
+    )
+
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="pending",
+        index=True,
+    )
+
+    admin_note = db.Column(
+        db.String(255),
+        nullable=False,
+        default="",
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+    reviewed_at = db.Column(
+        db.DateTime,
+        nullable=True,
+                  )
+
+# ==========================================
 # EDIT YOUR OWN PROFILE
 # ==========================================
 
