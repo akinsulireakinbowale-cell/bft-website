@@ -941,6 +941,12 @@ def dashboard():
     </section>
     """
 
+    <p>
+    <a class="button" href="{{ url_for('my_wallet') }}">
+        My Wallet
+    </a>
+</p>
+    
     return page(
         "Dashboard",
         body,
