@@ -980,6 +980,12 @@ def my_wallet():
             {{ "%.2f"|format(wallet.balance) }}
         </h2>
 
+<p>
+    <a class="button" href="{{ url_for('deposit_funds') }}">
+        Deposit Funds
+    </a>
+</p>
+
         <p class="muted">
             Your wallet balance is displayed in Nigerian naira.
         </p>
