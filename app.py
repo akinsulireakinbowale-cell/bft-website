@@ -941,11 +941,19 @@ def dashboard():
     </section>
     """
 
-    <p>
-    <a class="button" href="{{ url_for('my_wallet') }}">
-        My Wallet
-    </a>
-</p>
+            <p>
+            <a class="button" href="{{ url_for('edit_profile') }}">
+                Edit my profile
+            </a>
+        </p>
+
+        <p>
+            <a class="button" href="{{ url_for('my_wallet') }}">
+                My Wallet
+            </a>
+        </p>
+    </section>
+    """
     
     return page(
         "Dashboard",
