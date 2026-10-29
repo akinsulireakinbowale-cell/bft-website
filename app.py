@@ -1835,6 +1835,81 @@ def admin_review_deposit(deposit_id):
     return redirect(url_for("admin_deposits"))
 
 # ==========================================
+# ADMIN WITHDRAWAL MANAGEMENT
+# ==========================================
+
+@app.route("/admin/withdrawals")
+@admin_required
+def admin_withdrawals():
+    withdrawals = WithdrawalRequest.query.order_by(
+        WithdrawalRequest.created_at.desc()
+    ).all()
+
+    body = """
+    <section class="card">
+        <h1>Withdrawal Management</h1>
+
+        {% if withdrawals %}
+            {% for withdrawal in withdrawals %}
+                <div class="card">
+                    <h3>Withdrawal #{{ withdrawal.id }}</h3>
+
+                    <p>
+                        <strong>User ID:</strong>
+                        {{ withdrawal.user_id }}
+                    </p>
+
+                    <p>
+                        <strong>Amount:</strong>
+                        NGN {{ "%.2f"|format(withdrawal.amount) }}
+                    </p>
+
+                    <p>
+                        <strong>Bank:</strong>
+                        {{ withdrawal.bank_name }}
+                    </p>
+
+                    <p>
+                        <strong>Account Name:</strong>
+                        {{ withdrawal.account_name }}
+                    </p>
+
+                    <p>
+                        <strong>Account Number:</strong>
+                        {{ withdrawal.account_number }}
+                    </p>
+
+                    <p>
+                        <strong>Status:</strong>
+                        {{ withdrawal.status|title }}
+                    </p>
+
+                    <p>
+                        <strong>Date:</strong>
+                        {{ withdrawal.created_at }}
+                    </p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No withdrawal requests have been submitted yet.</p>
+        {% endif %}
+
+        <p>
+            <a class="button"
+               href="{{ url_for('admin_dashboard') }}">
+                Back to Admin Dashboard
+            </a>
+        </p>
+    </section>
+    """
+
+    return page(
+        "Withdrawal Management",
+        body,
+        withdrawals=withdrawals,
+    )
+
+# ==========================================
 # ADMIN: EDIT USER
 # ==========================================
 
