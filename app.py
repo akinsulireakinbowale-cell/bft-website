@@ -949,6 +949,111 @@ def dashboard():
         referral_link=referral_link,
     )
 
+# ==========================================
+# MY WALLET
+# ==========================================
+
+@app.route("/wallet")
+@login_required
+def my_wallet():
+    user = get_current_user()
+
+    if user is None:
+        return redirect(url_for("login"))
+
+    wallet = Wallet.query.filter_by(
+        user_id=user.id
+    ).first()
+
+    if wallet is None:
+        wallet = Wallet(
+            user_id=user.id,
+            balance=0,
+            currency="NGN",
+        )
+
+        db.session.add(wallet)
+        db.session.commit()
+
+    transactions = WalletTransaction.query.filter_by(
+        wallet_id=wallet.id
+    ).order_by(
+        WalletTransaction.created_at.desc()
+    ).limit(50).all()
+
+    body = """
+    <section class="card">
+        <h1>My Wallet</h1>
+
+        <p>Your available wallet balance:</p>
+
+        <h2>
+            {{ wallet.currency }}
+            {{ "%.2f"|format(wallet.balance) }}
+        </h2>
+
+        <p class="muted">
+            Your wallet balance is displayed in Nigerian naira.
+        </p>
+    </section>
+
+    <section class="card">
+        <h2>Transaction History</h2>
+
+        {% if transactions %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for transaction in transactions %}
+                            <tr>
+                                <td>
+                                    {{ transaction.created_at.strftime("%d %b %Y") }}
+                                </td>
+
+                                <td>
+                                    {{ transaction.transaction_type|title }}
+                                </td>
+
+                                <td>
+                                    {{ wallet.currency }}
+                                    {{ "%.2f"|format(transaction.amount) }}
+                                </td>
+
+                                <td>
+                                    {{ transaction.status|title }}
+                                </td>
+
+                                <td>
+                                    {{ transaction.description }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>You have no transactions yet.</p>
+        {% endif %}
+    </section>
+    """
+
+    return page(
+        "My Wallet",
+        body,
+        user=user,
+        wallet=wallet,
+        transactions=transactions,
+    )
 
 # ==========================================
 # EDIT YOUR OWN PROFILE
