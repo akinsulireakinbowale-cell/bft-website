@@ -1606,6 +1606,13 @@ def admin_dashboard():
     </a>
 </p>
 
+<h2>Withdrawal Management</h2>
+<p>
+    <a class="button" href="{{ url_for('admin_withdrawals') }}">
+        View Withdrawal Requests
+    </a>
+</p>
+
         <h2>Registered Users</h2>
 
         {% for member in users %}
