@@ -1525,10 +1525,99 @@ def admin_review_deposit(deposit_id):
         flash("Invalid deposit decision.")
         return redirect(url_for("admin_deposits"))
 
-    flash(
-        "The review route is registered, but deposit approval "
-        "processing must be added and tested before use."
-    )
+    try:
+        # Lock the deposit row to help prevent duplicate processing.
+        deposit = (
+            DepositRequest.query
+            .filter_by(id=deposit_id)
+            .with_for_update()
+            .first()
+        )
+
+        if deposit is None:
+            flash("Deposit request not found.")
+            return redirect(url_for("admin_deposits"))
+
+        # Only pending deposits can be reviewed.
+        if deposit.status != "pending":
+            flash("This deposit has already been reviewed.")
+            return redirect(url_for("admin_deposits"))
+
+        if decision == "reject":
+            deposit.status = "rejected"
+            deposit.reviewed_at = datetime.utcnow()
+            deposit.admin_note = "Rejected by administrator."
+
+            db.session.commit()
+
+            flash("Deposit request rejected. No money was added.")
+            return redirect(url_for("admin_deposits"))
+
+        # APPROVAL:
+        # Confirm that the real bank transfer has been received
+        # before approving this request.
+        wallet = Wallet.query.filter_by(
+            user_id=deposit.user_id
+        ).with_for_update().first()
+
+        if wallet is None:
+            wallet = Wallet(
+                user_id=deposit.user_id,
+                balance=Decimal("0.00"),
+                currency="NGN",
+            )
+            db.session.add(wallet)
+            db.session.flush()
+
+        # Use a unique reference for this wallet transaction.
+        transaction_reference = f"deposit-{deposit.id}"
+
+        existing_transaction = WalletTransaction.query.filter_by(
+            reference=transaction_reference
+        ).first()
+
+        if existing_transaction is not None:
+            raise ValueError(
+                "A transaction already exists for this deposit."
+            )
+
+        # Credit the wallet and record the transaction together.
+        wallet.balance = (
+            Decimal(str(wallet.balance)) + Decimal(str(deposit.amount))
+        )
+        wallet.updated_at = datetime.utcnow()
+
+        wallet_transaction = WalletTransaction(
+            wallet_id=wallet.id,
+            user_id=deposit.user_id,
+            transaction_type="deposit",
+            amount=deposit.amount,
+            status="completed",
+            reference=transaction_reference,
+            description=f"Approved deposit #{deposit.id}",
+        )
+
+        db.session.add(wallet_transaction)
+
+        deposit.status = "approved"
+        deposit.reviewed_at = datetime.utcnow()
+        deposit.admin_note = "Payment verified and approved."
+
+        # Save everything in one database transaction.
+        db.session.commit()
+
+        flash(
+            "Deposit approved, wallet credited, "
+            "and transaction recorded."
+        )
+
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Deposit review failed.")
+        flash(
+            "The deposit could not be processed. "
+            "Check the application logs."
+        )
 
     return redirect(url_for("admin_deposits"))
 
