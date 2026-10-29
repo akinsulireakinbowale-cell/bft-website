@@ -49,6 +49,20 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=1800,
 )
 
+app.config.update(
+    SECRET_KEY=secret_key,
+
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+
+    SESSION_COOKIE_SECURE=(
+        os.environ.get("COOKIE_SECURE", "true").lower()
+        == "true"
+    ),
+
+    PERMANENT_SESSION_LIFETIME=1800,
+)
+
 database_url = os.environ.get(
     "DATABASE_URL",
     "sqlite:///bft.db",
