@@ -3,6 +3,7 @@ import secrets
 import string
 from datetime import datetime
 from functools import wraps
+request.method
 
 from flask import (
     Flask,
@@ -1041,6 +1042,142 @@ def my_wallet():
         wallet=wallet,
         transactions=transactions,
     )
+
+# ==========================================
+# DEPOSIT FUNDS
+# ==========================================
+
+@app.route("/deposit", methods=["GET", "POST"])
+@login_required
+def deposit_funds():
+    user = get_current_user()
+
+    if user is None:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        sender_name = request.form.get(
+            "sender_name", ""
+        ).strip()
+
+        payment_reference = request.form.get(
+            "payment_reference", ""
+        ).strip()
+
+        amount_text = request.form.get(
+            "amount", ""
+        ).strip()
+
+        if not sender_name or not payment_reference or not amount_text:
+            flash("Please complete all deposit fields.")
+            return redirect(url_for("deposit_funds"))
+
+        try:
+            amount = Decimal(amount_text)
+        except InvalidOperation:
+            flash("Please enter a valid deposit amount.")
+            return redirect(url_for("deposit_funds"))
+
+        if not amount.is_finite() or amount <= 0:
+            flash("The deposit amount must be greater than zero.")
+            return redirect(url_for("deposit_funds"))
+
+        if amount.as_tuple().exponent < -2:
+            flash("Please enter no more than two decimal places.")
+            return redirect(url_for("deposit_funds"))
+
+        existing_request = DepositRequest.query.filter_by(
+            payment_reference=payment_reference
+        ).first()
+
+        if existing_request:
+            flash("This payment reference has already been submitted.")
+            return redirect(url_for("deposit_funds"))
+
+        deposit = DepositRequest(
+            user_id=user.id,
+            amount=amount,
+            sender_name=sender_name,
+            payment_reference=payment_reference,
+            status="pending",
+        )
+
+        db.session.add(deposit)
+        db.session.commit()
+
+        flash(
+            "Your deposit request has been submitted. "
+            "It will remain pending until your payment is verified."
+        )
+
+        return redirect(url_for("my_wallet"))
+
+    body = """
+    <section class="card">
+        <h1>Deposit Funds</h1>
+
+        <p>
+            Transfer money to the BFT bank account provided
+            by the administrator.
+        </p>
+
+        <p>
+            <strong>Bank details:</strong>
+        </p>
+
+        <p>
+            Contact the BFT administrator for the verified
+            bank name, account name, and account number.
+        </p>
+
+        <p class="muted">
+            Do not transfer money until you have confirmed
+            the official account details.
+        </p>
+    </section>
+
+    <section class="card">
+        <h2>Submit Your Transfer</h2>
+
+        <form method="POST" action="{{ url_for('deposit_funds') }}">
+
+            <label for="amount">Amount (NGN)</label>
+            <input
+                type="number"
+                id="amount"
+                name="amount"
+                min="0.01"
+                step="0.01"
+                required
+            >
+
+            <label for="sender_name">Account Name Used for Transfer</label>
+            <input
+                type="text"
+                id="sender_name"
+                name="sender_name"
+                maxlength="120"
+                required
+            >
+
+            <label for="payment_reference">Transfer Reference</label>
+            <input
+                type="text"
+                id="payment_reference"
+                name="payment_reference"
+                maxlength="100"
+                required
+            >
+
+            <button type="submit">
+                Submit Deposit Request
+            </button>
+
+        </form>
+    </section>
+    """
+
+    return page("Deposit Funds", body, user=user)
 
 # ==========================================
 # DEPOSIT REQUEST MODEL
