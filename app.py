@@ -1239,6 +1239,39 @@ class DepositRequest(db.Model):
         nullable=True,
                   )
 
+class WithdrawalRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        index=True,
+    )
+
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+
+    bank_name = db.Column(db.String(120), nullable=False)
+    account_name = db.Column(db.String(120), nullable=False)
+    account_number = db.Column(db.String(30), nullable=False)
+
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="pending",
+        index=True,
+    )
+
+    admin_note = db.Column(db.String(255), nullable=False, default="")
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+
 # ==========================================
 # EDIT YOUR OWN PROFILE
 # ==========================================
