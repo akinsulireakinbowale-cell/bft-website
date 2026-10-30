@@ -1,7 +1,7 @@
 Flask
+Flask-Login
 Flask-SQLAlchemy
-psycopg2-binary
-psycopg[binary]
-gunicorn
-Flask-Limiter
 Flask-WTF
+Flask-Limiter
+gunicorn
+psycopg2-binary
