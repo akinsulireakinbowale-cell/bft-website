@@ -1216,6 +1216,41 @@ def my_wallet():
     <section class="card">
         <h2>Transaction History</h2>
 
+<section class="card">
+    <h2>Redeem Gift Code</h2>
+
+    <p>
+        Enter your daily gift code to receive ₦100
+        in your wallet.
+    </p>
+
+    <form
+        method="POST"
+        action="{{ url_for('redeem_gift_code') }}"
+    >
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ csrf_token() }}"
+        >
+
+        <label for="gift_code">Gift Code</label>
+
+        <input
+            type="text"
+            id="gift_code"
+            name="gift_code"
+            placeholder="Enter your gift code"
+            maxlength="50"
+            required
+        >
+
+        <button type="submit">
+            Redeem ₦100
+        </button>
+    </form>
+</section>
+
         {% if transactions %}
             <div class="table-wrap">
                 <table>
@@ -1270,6 +1305,97 @@ def my_wallet():
         wallet=wallet,
         transactions=transactions,
     )
+
+@app.route("/redeem-gift-code", methods=["POST"])
+@login_required
+def redeem_gift_code():
+    user = get_current_user()
+
+    if user is None:
+        return redirect(url_for("login"))
+
+    code_text = request.form.get("gift_code", "").strip().upper()
+
+    if not code_text:
+        flash("Please enter a gift code.")
+        return redirect(url_for("my_wallet"))
+
+    try:
+        # Lock the gift code to prevent two users taking the final slot.
+        gift = GiftCode.query.filter_by(
+            code=code_text
+        ).with_for_update().first()
+
+        if gift is None:
+            flash("Invalid gift code.")
+            return redirect(url_for("my_wallet"))
+
+        if not gift.is_active:
+            flash("This gift code is no longer active.")
+            return redirect(url_for("my_wallet"))
+
+        if datetime.utcnow() >= gift.expires_at:
+            flash("This gift code has expired.")
+            return redirect(url_for("my_wallet"))
+
+        if gift.redeemed_count >= gift.max_redemptions:
+            flash("This gift code has reached its redemption limit.")
+            return redirect(url_for("my_wallet"))
+
+        existing = GiftCodeRedemption.query.filter_by(
+            gift_code_id=gift.id,
+            user_id=user.id,
+        ).first()
+
+        if existing:
+            flash("You have already redeemed this gift code.")
+            return redirect(url_for("my_wallet"))
+
+        wallet = Wallet.query.filter_by(
+            user_id=user.id
+        ).with_for_update().first()
+
+        if wallet is None:
+            wallet = Wallet(
+                user_id=user.id,
+                balance=Decimal("0.00"),
+                currency="NGN",
+            )
+            db.session.add(wallet)
+            db.session.flush()
+
+        wallet.balance = (
+            Decimal(str(wallet.balance)) + Decimal("100.00")
+        )
+
+        gift.redeemed_count += 1
+
+        redemption = GiftCodeRedemption(
+            gift_code_id=gift.id,
+            user_id=user.id,
+        )
+
+        transaction = WalletTransaction(
+            wallet_id=wallet.id,
+            user_id=user.id,
+            transaction_type="gift",
+            amount=Decimal("100.00"),
+            status="approved",
+            reference="GIFT-" + secrets.token_hex(12).upper(),
+            description="Gift code reward: " + gift.code,
+        )
+
+        db.session.add(redemption)
+        db.session.add(transaction)
+        db.session.commit()
+
+        flash("Congratulations! ₦100 has been added to your wallet.")
+
+    except Exception:
+        db.session.rollback()
+        flash("We could not process your gift code. Please try again.")
+
+    return redirect(url_for("my_wallet"))
 
 # ==========================================
 # DEPOSIT FUNDS
