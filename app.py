@@ -740,8 +740,6 @@ def register():
 
         referrer = None
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
     if request.method == "POST":
         full_name = request.form.get("full_name", "").strip()
         email = request.form.get("email", "").strip().lower()
