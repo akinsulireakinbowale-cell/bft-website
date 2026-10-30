@@ -921,7 +921,7 @@ body = """
 
     </form>
 
-    <p>
+        <p>
         Already registered?
         <a href="{{ url_for('login') }}">Log in</a>
     </p>
