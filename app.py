@@ -1092,47 +1092,32 @@ def login():
 def dashboard():
     user = get_current_user()
 
-    referral_count = User.query.filter_by(
-        referred_by=user.referral_code
-    ).count()
-
-    referral_link = url_for(
-        "register",
-        _external=True,
-    ) + "?ref=" + user.referral_code
-
     body = """
     <section class="card">
-        <h1>Hello, {{ user.full_name }}!</h1>
+        <h1>My Account</h1>
 
-        <p>Welcome to your BFT dashboard.</p>
+        <p>Welcome, {{ user.full_name }}!</p>
 
-        <h3>Your Referral Information</h3>
+        <h3>Personal Information</h3>
 
         <p>
-            <strong>Referral Code:</strong>
-            {{ user.referral_code }}
+            <strong>Full Name:</strong>
+            {{ user.full_name }}
         </p>
 
         <p>
-            <strong>Total Referrals:</strong>
-            {{ referral_count }}
+            <strong>Email:</strong>
+            {{ user.email }}
         </p>
 
-        <div>
-            <label for="referral_link">Your Referral Link</label>
+        <p>
+            <strong>Phone:</strong>
+            {{ user.phone }}
+        </p>
 
-            <input
-                id="referral_link"
-                value="{{ referral_link }}"
-                readonly
-                onclick="this.select()"
-            >
+        <hr>
 
-            <p class="muted">
-                Share this link with people you invite to BFT.
-            </p>
-        </div>
+        <h3>Account Management</h3>
 
         <p>
             <a class="button" href="{{ url_for('edit_profile') }}">
@@ -1145,15 +1130,19 @@ def dashboard():
                 My Wallet
             </a>
         </p>
+
+        <p>
+            <a class="button danger" href="{{ url_for('logout') }}">
+                Log Out
+            </a>
+        </p>
     </section>
-    """ 
-    
+    """
+
     return page(
-        "Dashboard",
+        "My Account",
         body,
         user=user,
-        referral_count=referral_count,
-        referral_link=referral_link,
     )
 
 # ==========================================
