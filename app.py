@@ -146,6 +146,30 @@ class User(db.Model):
         nullable=True,
     )
 
+class ReferralCodeStatus(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True,
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
 # ==========================================
 # WALLET MODEL
 # ==========================================
@@ -2674,6 +2698,67 @@ def admin_dashboard():
         inactive_users=inactive_users,
         user_is_active=user_is_active,
     )
+
+@app.route(
+    "/admin/referral-code/<int:user_id>/disable",
+    methods=["POST"],
+)
+@admin_required
+def admin_disable_referral_code(user_id):
+    member = db.session.get(User, user_id)
+
+    if member is None:
+        flash("User not found.")
+        return redirect(url_for("admin_dashboard"))
+
+    status = ReferralCodeStatus.query.filter_by(
+        user_id=member.id
+    ).first()
+
+    if status is None:
+        status = ReferralCodeStatus(
+            user_id=member.id,
+            is_active=False,
+        )
+        db.session.add(status)
+    else:
+        status.is_active = False
+
+    db.session.commit()
+
+    flash("Referral code disabled successfully.")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route(
+    "/admin/referral-code/<int:user_id>/enable",
+    methods=["POST"],
+)
+@admin_required
+def admin_enable_referral_code(user_id):
+    member = db.session.get(User, user_id)
+
+    if member is None:
+        flash("User not found.")
+        return redirect(url_for("admin_dashboard"))
+
+    status = ReferralCodeStatus.query.filter_by(
+        user_id=member.id
+    ).first()
+
+    if status is None:
+        status = ReferralCodeStatus(
+            user_id=member.id,
+            is_active=True,
+        )
+        db.session.add(status)
+    else:
+        status.is_active = True
+
+    db.session.commit()
+
+    flash("Referral code enabled successfully.")
+    return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/gift-codes", methods=["GET", "POST"])
 @admin_required
