@@ -344,13 +344,13 @@ class GiftCodeRedemption(db.Model):
     )
 
 @app.route("/card-bank", methods=["GET", "POST"])
-@login_required
 def card_bank():
     user = get_current_user()
 
-    details = BankDetails.query.filter_by(
-        user_id=user.id
-    ).first()
+    if user is None:
+        return redirect(url_for("login"))
+
+    details = BankDetails.query.filter_by(user_id=user.id).first()
 
     if request.method == "POST":
         bank_name = request.form.get("bank_name", "").strip()
