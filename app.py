@@ -1583,27 +1583,249 @@ def order():
 def team():
     user = get_current_user()
 
-    referral_count = User.query.filter_by(
+    if user is None:
+        return redirect(url_for("login"))
+
+    # Level 1: users directly referred by this user
+    level1 = User.query.filter_by(
         referred_by=user.referral_code
-    ).count()
+    ).all()
+
+    # Level 2: users referred by Level 1 members
+    level1_codes = [member.referral_code for member in level1]
+
+    level2 = []
+    if level1_codes:
+        level2 = User.query.filter(
+            User.referred_by.in_(level1_codes)
+        ).all()
+
+    # Level 3: users referred by Level 2 members
+    level2_codes = [member.referral_code for member in level2]
+
+    level3 = []
+    if level2_codes:
+        level3 = User.query.filter(
+            User.referred_by.in_(level2_codes)
+        ).all()
+
+    referral_status = ReferralCodeStatus.query.filter_by(
+        user_id=user.id
+    ).first()
+
+    referral_active = (
+        referral_status.is_active
+        if referral_status
+        else True
+    )
+
+    referral_link = url_for(
+        "register",
+        _external=True,
+    ) + "?ref=" + user.referral_code
 
     body = """
+    <style>
+        .team-header {
+            background: linear-gradient(135deg, #d62828, #f77f00);
+            color: white;
+            padding: 24px;
+            border-radius: 18px;
+            margin-bottom: 18px;
+        }
+
+        .team-card {
+            background: white;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+        }
+
+        .team-number {
+            font-size: 25px;
+            font-weight: bold;
+            color: #d62828;
+        }
+
+        .team-muted {
+            color: #777;
+            font-size: 13px;
+        }
+
+        .team-copy {
+            background: #d62828;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 9px;
+            margin-top: 8px;
+            cursor: pointer;
+        }
+
+        .team-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 9px;
+            background: #f7f7f7;
+        }
+
+        .team-level {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .team-rate {
+            color: #f77f00;
+            font-size: 22px;
+            font-weight: bold;
+        }
+    </style>
+
     <section class="card">
-        <h1>My Team</h1>
 
-        <p>Your Referral Code:</p>
-        <h2>{{ user.referral_code }}</h2>
+        <div class="team-header">
+            <h1>My Team</h1>
+            <p>Grow your network and track your team.</p>
+        </div>
 
-        <p>Total Team Members: {{ referral_count }}</p>
+        <div class="team-card">
+            <h3>Referral Code</h3>
+
+            <input
+                class="team-input"
+                id="referralCode"
+                value="{{ user.referral_code }}"
+                readonly
+            >
+
+            <button
+                class="team-copy"
+                onclick="copyTeamText('referralCode')"
+            >
+                Copy Code
+            </button>
+
+            <p class="team-muted">
+                Referral status:
+                {% if referral_active %}
+                    <strong style="color:green;">Active</strong>
+                {% else %}
+                    <strong style="color:red;">Disabled</strong>
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="team-card">
+            <h3>Referral Link</h3>
+
+            <input
+                class="team-input"
+                id="referralLink"
+                value="{{ referral_link }}"
+                readonly
+            >
+
+            <button
+                class="team-copy"
+                onclick="copyTeamText('referralLink')"
+            >
+                Copy Link
+            </button>
+        </div>
+
+        <div class="team-card">
+            <h3>Team Overview</h3>
+
+            <p>Total Team Members</p>
+            <div class="team-number">
+                {{ level1|length + level2|length + level3|length }}
+            </div>
+        </div>
+
+        <div class="team-card">
+            <div class="team-level">
+                <div>
+                    <h3>Level 1</h3>
+                    <p class="team-muted">Direct referrals</p>
+                </div>
+                <div class="team-rate">10%</div>
+            </div>
+            <div class="team-number">{{ level1|length }}</div>
+            <p class="team-muted">Members</p>
+        </div>
+
+        <div class="team-card">
+            <div class="team-level">
+                <div>
+                    <h3>Level 2</h3>
+                    <p class="team-muted">Second level</p>
+                </div>
+                <div class="team-rate">3%</div>
+            </div>
+            <div class="team-number">{{ level2|length }}</div>
+            <p class="team-muted">Members</p>
+        </div>
+
+        <div class="team-card">
+            <div class="team-level">
+                <div>
+                    <h3>Level 3</h3>
+                    <p class="team-muted">Third level</p>
+                </div>
+                <div class="team-rate">1%</div>
+            </div>
+            <div class="team-number">{{ level3|length }}</div>
+            <p class="team-muted">Members</p>
+        </div>
+
+        <div class="team-card">
+            <h3>Referral Commission</h3>
+            <p>
+                Level 1: <strong>10%</strong><br>
+                Level 2: <strong>3%</strong><br>
+                Level 3: <strong>1%</strong>
+            </p>
+
+            <p class="team-muted">
+                Commission earnings will appear when verified
+                product sales are supported by the order system.
+            </p>
+        </div>
+
     </section>
+
+    <script>
+        function copyTeamText(elementId) {
+            const field = document.getElementById(elementId);
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(field.value)
+                    .then(() => alert("Copied successfully!"))
+                    .catch(() => alert("Unable to copy. Please copy manually."));
+            } else {
+                field.select();
+                field.setSelectionRange(0, 99999);
+                document.execCommand("copy");
+                alert("Copied successfully!");
+            }
+        }
+    </script>
     """
 
     return page(
         "My Team",
         body,
         user=user,
-        referral_count=referral_count,
-)
+        level1=level1,
+        level2=level2,
+        level3=level3,
+        referral_link=referral_link,
+        referral_active=referral_active,
+    )
 
 # ==========================================
 # MY WALLET
