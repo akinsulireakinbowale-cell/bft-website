@@ -1104,30 +1104,27 @@ def dashboard():
         db.session.add(wallet)
         db.session.commit()
 
-    history_type = request.args.get("history", "all")
-
-    transaction_query = WalletTransaction.query.filter_by(
+    transactions = WalletTransaction.query.filter_by(
         wallet_id=wallet.id
-    )
-
-    if history_type == "deposit":
-        transaction_query = transaction_query.filter_by(
-            transaction_type="deposit"
-        )
-    elif history_type == "withdrawal":
-        transaction_query = transaction_query.filter_by(
-            transaction_type="withdrawal"
-        )
-
-    transactions = transaction_query.order_by(
+    ).order_by(
         WalletTransaction.created_at.desc()
-    ).limit(50).all()
+    ).limit(100).all()
+
+    deposits = [
+        t for t in transactions
+        if t.transaction_type.lower() == "deposit"
+    ]
+
+    withdrawals = [
+        t for t in transactions
+        if t.transaction_type.lower() == "withdrawal"
+    ]
 
     body = """
     <section class="card">
         <p class="muted">TOTAL WALLET BALANCE</p>
 
-        <h1 style="font-size: 32px; color: #1769aa;">
+        <h1 style="font-size:32px; color:#1769aa;">
             ₦{{ "%.2f"|format(wallet.balance) }}
         </h1>
 
@@ -1149,105 +1146,135 @@ def dashboard():
     <section class="card">
         <h2>Account Activities</h2>
 
-        <p>
-            <a class="button"
-               href="{{ url_for('dashboard', history='all') }}">
+        <details>
+            <summary class="button">
                 Transaction History
-            </a>
-        </p>
+            </summary>
 
-        <p>
-            <a class="button"
-               href="{{ url_for('dashboard', history='deposit') }}">
-                Deposit History
-            </a>
-        </p>
-
-        <p>
-            <a class="button"
-               href="{{ url_for('dashboard', history='withdrawal') }}">
-                Withdrawal History
-            </a>
-        </p>
-
-        <p>
-            <a class="button" href="#gift-code">
-                Gift Code
-            </a>
-        </p>
-    </section>
-
-    <section class="card" id="gift-code">
-        <h2>Redeem Gift Code</h2>
-
-        <p>Enter your daily gift code to receive ₦100.</p>
-
-        <form method="POST"
-              action="{{ url_for('redeem_gift_code') }}">
-
-            <input type="hidden"
-                   name="csrf_token"
-                   value="{{ csrf_token() }}">
-
-            <label for="gift_code">Gift Code</label>
-
-            <input type="text"
-                   id="gift_code"
-                   name="gift_code"
-                   placeholder="Enter your gift code"
-                   maxlength="50"
-                   required>
-
-            <button type="submit">Redeem ₦100</button>
-        </form>
-    </section>
-
-    <section class="card">
-        <h2>
-            {% if history_type == "deposit" %}
-                Deposit History
-            {% elif history_type == "withdrawal" %}
-                Withdrawal History
+            {% if transactions %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction.created_at.strftime("%d %b %Y") }}</td>
+                            <td>{{ transaction.transaction_type|title }}</td>
+                            <td>₦{{ "%.2f"|format(transaction.amount) }}</td>
+                            <td>{{ transaction.status|title }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
-                Transaction History
+                <p>No transactions yet.</p>
             {% endif %}
-        </h2>
+        </details>
 
-        {% if transactions %}
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
+        <br>
 
-                <tbody>
-                    {% for transaction in transactions %}
-                    <tr>
-                        <td>
-                            {{ transaction.created_at.strftime("%d %b %Y") }}
-                        </td>
-                        <td>
-                            {{ transaction.transaction_type|title }}
-                        </td>
-                        <td>
-                            ₦{{ "%.2f"|format(transaction.amount) }}
-                        </td>
-                        <td>
-                            {{ transaction.status|title }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-            <p>No records found.</p>
-        {% endif %}
+        <details>
+            <summary class="button">
+                Deposit History
+            </summary>
+
+            {% if deposits %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in deposits %}
+                        <tr>
+                            <td>{{ transaction.created_at.strftime("%d %b %Y") }}</td>
+                            <td>₦{{ "%.2f"|format(transaction.amount) }}</td>
+                            <td>{{ transaction.status|title }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p>No deposit transactions yet.</p>
+            {% endif %}
+        </details>
+
+        <br>
+
+        <details>
+            <summary class="button">
+                Withdrawal History
+            </summary>
+
+            {% if withdrawals %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in withdrawals %}
+                        <tr>
+                            <td>{{ transaction.created_at.strftime("%d %b %Y") }}</td>
+                            <td>₦{{ "%.2f"|format(transaction.amount) }}</td>
+                            <td>{{ transaction.status|title }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p>No withdrawal transactions yet.</p>
+            {% endif %}
+        </details>
+
+        <br>
+
+        <details>
+            <summary class="button">
+                Gift Code
+            </summary>
+
+            <p>Enter your daily gift code to redeem your reward.</p>
+
+            <form method="POST"
+                  action="{{ url_for('redeem_gift_code') }}">
+
+                <input type="hidden"
+                       name="csrf_token"
+                       value="{{ csrf_token() }}">
+
+                <label for="gift_code">Gift Code</label>
+
+                <input type="text"
+                       id="gift_code"
+                       name="gift_code"
+                       placeholder="Enter your gift code"
+                       maxlength="50"
+                       required>
+
+                <br><br>
+
+                <button type="submit">Redeem Gift Code</button>
+            </form>
+        </details>
     </section>
     """
 
@@ -1257,7 +1284,8 @@ def dashboard():
         user=user,
         wallet=wallet,
         transactions=transactions,
-        history_type=history_type,
+        deposits=deposits,
+        withdrawals=withdrawals,
         )
 
 # ==========================================
