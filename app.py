@@ -1844,6 +1844,12 @@ def admin_deposits():
                                 Approve Verified Deposit
                             </button>
 
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}"
+>
+
                             <button type="submit" name="decision" value="reject">
                                 Reject Deposit
                             </button>
@@ -2045,6 +2051,12 @@ def admin_withdrawals():
                                 'Approving will deduct the amount from the wallet.'
                             );"
                         >
+
+                        <input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}"
+>
                             <button
                                 type="submit"
                                 name="decision"
