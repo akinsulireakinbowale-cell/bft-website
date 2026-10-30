@@ -859,6 +859,40 @@ def login():
 
                 return redirect(url_for("dashboard"))
 
+@app.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
+def login():
+    if request.method == "POST":
+        email = request.form.get(
+            "email",
+            "",
+        ).strip().lower()
+
+        password = request.form.get(
+            "password",
+            "",
+        )
+
+        user = User.query.filter_by(email=email).first()
+
+        if user and check_password_hash(
+            user.password_hash,
+            password,
+        ):
+            if not user_is_active(user):
+                flash(
+                    "Your account is deactivated. Please contact the administrator.",
+                    "error",
+                )
+            else:
+                session.clear()
+                session.permanent = True
+                session["user_id"] = user.id
+
+                flash("Welcome back.", "success")
+
+                return redirect(url_for("dashboard"))
+
         else:
             flash(
                 "The email or password is incorrect.",
@@ -902,7 +936,6 @@ def login():
     """
 
     return page("Log in", body)
-
 
 
 # ==========================================
