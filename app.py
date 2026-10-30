@@ -1154,6 +1154,70 @@ def dashboard():
     )
 
 # ==========================================
+# MARKET PAGE
+# ==========================================
+
+@app.route("/market")
+@login_required
+def market():
+    body = """
+    <section class="card">
+        <h1>Market</h1>
+        <p>Welcome to the BFT Market.</p>
+        <p>Available products will appear here.</p>
+    </section>
+    """
+    return page("Market", body)
+
+
+# ==========================================
+# ORDER PAGE
+# ==========================================
+
+@app.route("/order")
+@login_required
+def order():
+    body = """
+    <section class="card">
+        <h1>My Orders</h1>
+        <p>Your orders will appear here.</p>
+    </section>
+    """
+    return page("Order", body)
+
+
+# ==========================================
+# TEAM PAGE
+# ==========================================
+
+@app.route("/team")
+@login_required
+def team():
+    user = get_current_user()
+
+    referral_count = User.query.filter_by(
+        referred_by=user.referral_code
+    ).count()
+
+    body = """
+    <section class="card">
+        <h1>My Team</h1>
+
+        <p>Your Referral Code:</p>
+        <h2>{{ user.referral_code }}</h2>
+
+        <p>Total Team Members: {{ referral_count }}</p>
+    </section>
+    """
+
+    return page(
+        "My Team",
+        body,
+        user=user,
+        referral_count=referral_count,
+)
+
+# ==========================================
 # MY WALLET
 # ==========================================
 
