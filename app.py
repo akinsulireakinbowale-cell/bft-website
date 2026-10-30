@@ -1104,22 +1104,6 @@ def dashboard():
         db.session.add(wallet)
         db.session.commit()
 
-    transactions = WalletTransaction.query.filter_by(
-        wallet_id=wallet.id
-    ).order_by(
-        WalletTransaction.created_at.desc()
-    ).limit(100).all()
-
-    deposits = [
-        t for t in transactions
-        if t.transaction_type.lower() == "deposit"
-    ]
-
-    withdrawals = [
-        t for t in transactions
-        if t.transaction_type.lower() == "withdrawal"
-    ]
-
     body = """
     <section class="card">
         <p class="muted">TOTAL WALLET BALANCE</p>
@@ -1146,135 +1130,33 @@ def dashboard():
     <section class="card">
         <h2>Account Activities</h2>
 
-        <details>
-            <summary class="button">
+        <p>
+            <a class="button"
+               href="{{ url_for('transaction_history') }}">
                 Transaction History
-            </summary>
+            </a>
+        </p>
 
-            {% if transactions %}
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for transaction in transactions %}
-                        <tr>
-                            <td>{{ transaction.created_at.strftime("%d %b %Y") }}</td>
-                            <td>{{ transaction.transaction_type|title }}</td>
-                            <td>₦{{ "%.2f"|format(transaction.amount) }}</td>
-                            <td>{{ transaction.status|title }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-                <p>No transactions yet.</p>
-            {% endif %}
-        </details>
-
-        <br>
-
-        <details>
-            <summary class="button">
+        <p>
+            <a class="button"
+               href="{{ url_for('deposit_history') }}">
                 Deposit History
-            </summary>
+            </a>
+        </p>
 
-            {% if deposits %}
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for transaction in deposits %}
-                        <tr>
-                            <td>{{ transaction.created_at.strftime("%d %b %Y") }}</td>
-                            <td>₦{{ "%.2f"|format(transaction.amount) }}</td>
-                            <td>{{ transaction.status|title }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-                <p>No deposit transactions yet.</p>
-            {% endif %}
-        </details>
-
-        <br>
-
-        <details>
-            <summary class="button">
+        <p>
+            <a class="button"
+               href="{{ url_for('withdrawal_history') }}">
                 Withdrawal History
-            </summary>
+            </a>
+        </p>
 
-            {% if withdrawals %}
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for transaction in withdrawals %}
-                        <tr>
-                            <td>{{ transaction.created_at.strftime("%d %b %Y") }}</td>
-                            <td>₦{{ "%.2f"|format(transaction.amount) }}</td>
-                            <td>{{ transaction.status|title }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-                <p>No withdrawal transactions yet.</p>
-            {% endif %}
-        </details>
-
-        <br>
-
-        <details>
-            <summary class="button">
+        <p>
+            <a class="button"
+               href="{{ url_for('gift_code_page') }}">
                 Gift Code
-            </summary>
-
-            <p>Enter your daily gift code to redeem your reward.</p>
-
-            <form method="POST"
-                  action="{{ url_for('redeem_gift_code') }}">
-
-                <input type="hidden"
-                       name="csrf_token"
-                       value="{{ csrf_token() }}">
-
-                <label for="gift_code">Gift Code</label>
-
-                <input type="text"
-                       id="gift_code"
-                       name="gift_code"
-                       placeholder="Enter your gift code"
-                       maxlength="50"
-                       required>
-
-                <br><br>
-
-                <button type="submit">Redeem Gift Code</button>
-            </form>
-        </details>
+            </a>
+        </p>
     </section>
     """
 
@@ -1283,10 +1165,9 @@ def dashboard():
         body,
         user=user,
         wallet=wallet,
-        transactions=transactions,
-        deposits=deposits,
-        withdrawals=withdrawals,
-        )
+    )
+
+
 
 # ==========================================
 # MARKET PAGE
