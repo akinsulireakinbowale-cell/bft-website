@@ -83,6 +83,15 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri=os.environ.get(
+        "RATELIMIT_STORAGE_URI",
+        "memory://",
+    ),
+)
 
 # ==========================================
 # DATABASE MODELS
