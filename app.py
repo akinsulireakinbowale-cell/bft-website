@@ -82,6 +82,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
+csrf = CSRFProtect(app)
 
 limiter = Limiter(
     get_remote_address,
