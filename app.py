@@ -903,43 +903,25 @@ def home():
 def register():
     if request.method == "POST":
         full_name = request.form.get(
-            "full_name",
-            "",
+            "full_name", ""
         ).strip()
 
         email = request.form.get(
-            "email",
-            "",
+            "email", ""
         ).strip().lower()
 
         phone = request.form.get(
-            "phone",
-            "",
+            "phone", ""
         ).strip()
 
         password = request.form.get(
-            "password",
-            "",
+            "password", ""
         )
 
         confirm_password = request.form.get(
-            "confirm_password",
-            "",
+            "confirm_password", ""
         )
 
-        referral_input = request.form.get(
-            "referral_code",
-            "",
-        ).strip().upper()
-
-        referrer = None
-
-    if request.method == "POST":
-        full_name = request.form.get("full_name", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        phone = request.form.get("phone", "").strip()
-        password = request.form.get("password", "")
-        confirm_password = request.form.get("confirm_password", "")
         referral_input = request.form.get(
             "referral_code", ""
         ).strip().upper()
@@ -947,7 +929,10 @@ def register():
         referrer = None
 
         if not all([full_name, email, phone, password]):
-            flash("Please complete all required fields.", "error")
+            flash(
+                "Please complete all required fields.",
+                "error",
+            )
 
         elif len(password) < 8:
             flash(
@@ -956,7 +941,10 @@ def register():
             )
 
         elif password != confirm_password:
-            flash("The passwords do not match.", "error")
+            flash(
+                "The passwords do not match.",
+                "error",
+            )
 
         elif User.query.filter_by(email=email).first():
             flash(
@@ -973,6 +961,17 @@ def register():
                 if not referrer:
                     flash(
                         "That referral code was not found. Check it and try again.",
+                        "error",
+                    )
+                    return page("Register", body)
+
+                referral_status = ReferralCodeStatus.query.filter_by(
+                    user_id=referrer.id
+                ).first()
+
+                if referral_status and not referral_status.is_active:
+                    flash(
+                        "This referral code has been disabled.",
                         "error",
                     )
                     return page("Register", body)
@@ -1015,13 +1014,13 @@ def register():
             except Exception:
                 db.session.rollback()
                 app.logger.exception("Registration failed.")
+
                 flash(
                     "We could not create your account. Please try again.",
                     "error",
                 )
 
     return page("Register", body)
-
 
 # REGISTRATION HTML
 body = """
