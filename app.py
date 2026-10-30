@@ -762,6 +762,36 @@ def register():
             flash(
                 "An account with that email already exists. Please log in.",
                 "error",
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        phone = request.form.get("phone", "").strip()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        referral_input = request.form.get(
+            "referral_code", ""
+        ).strip().upper()
+
+        referrer = None
+
+        if not all([full_name, email, phone, password]):
+            flash("Please complete all required fields.", "error")
+
+        elif len(password) < 8:
+            flash(
+                "Your password must be at least 8 characters long.",
+                "error",
+            )
+
+        elif password != confirm_password:
+            flash("The passwords do not match.", "error")
+
+        elif User.query.filter_by(email=email).first():
+            flash(
+                "An account with that email already exists. Please log in.",
+                "error",
             )
 
         else:
@@ -775,58 +805,7 @@ def register():
                         "That referral code was not found. Check it and try again.",
                         "error",
                     )
-                    return page("Register", REGISTER_FORM)
-
-            <form method="post">
-
-    <input
-        type="hidden"
-        name="csrf_token"
-        value="{{ csrf_token() }}"
-    >
-
-    <label for="full_name">Full Name</label>
-    <input
-        type="text"
-        id="full_name"
-        name="full_name"
-        required
-    >
-
-    <label for="email">Email Address</label>
-    <input
-        type="email"
-        id="email"
-        name="email"
-        required
-    >
-
-    <label for="phone">Phone Number</label>
-    <input
-        type="text"
-        id="phone"
-        name="phone"
-        required
-    >
-
-    <label for="password">Password</label>
-    <input
-        type="password"
-        id="password"
-        name="password"
-        required
-    >
-
-    <label for="referral_code">Referral Code (Optional)</label>
-    <input
-        type="text"
-        id="referral_code"
-        name="referral_code"
-    >
-
-    <button type="submit">Create Account</button>
-
-</form>
+                    return page("Register", body)
 
             user = User(
                 full_name=full_name,
@@ -835,15 +814,13 @@ def register():
                 password_hash=generate_password_hash(password),
                 referral_code=make_referral_code(),
                 referred_by=(
-                    referrer.referral_code
-                    if referrer
-                    else None
+                    referrer.referral_code if referrer else None
                 ),
             )
 
             try:
                 db.session.add(user)
-                db.session.commit()
+                db.session.flush()
 
                 db.session.add(
                     UserStatus(
@@ -851,6 +828,7 @@ def register():
                         is_active=True,
                     )
                 )
+
                 db.session.commit()
 
                 session.clear()
@@ -867,13 +845,88 @@ def register():
             except Exception:
                 db.session.rollback()
                 app.logger.exception("Registration failed.")
-
                 flash(
                     "We could not create your account. Please try again.",
                     "error",
                 )
 
-    return page("Register", REGISTER_FORM)
+    return page("Register", body)
+
+
+# REGISTRATION HTML
+body = """
+<section class="card">
+    <h1>Create Your BFT Account</h1>
+
+    <form method="POST" action="{{ url_for('register') }}">
+
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ csrf_token() }}"
+        >
+
+        <label for="full_name">Full Name</label>
+        <input
+            type="text"
+            id="full_name"
+            name="full_name"
+            maxlength="120"
+            required
+        >
+
+        <label for="email">Email Address</label>
+        <input
+            type="email"
+            id="email"
+            name="email"
+            maxlength="150"
+            required
+        >
+
+        <label for="phone">Phone Number</label>
+        <input
+            type="text"
+            id="phone"
+            name="phone"
+            maxlength="40"
+            required
+        >
+
+        <label for="password">Password</label>
+        <input
+            type="password"
+            id="password"
+            name="password"
+            minlength="8"
+            required
+        >
+
+        <label for="confirm_password">Confirm Password</label>
+        <input
+            type="password"
+            id="confirm_password"
+            name="confirm_password"
+            required
+        >
+
+        <label for="referral_code">Referral Code (Optional)</label>
+        <input
+            type="text"
+            id="referral_code"
+            name="referral_code"
+        >
+
+        <button type="submit">Create Account</button>
+
+    </form>
+
+    <p>
+        Already registered?
+        <a href="{{ url_for('login') }}">Log in</a>
+    </p>
+</section>
+"""
 
 
 # ==========================================
