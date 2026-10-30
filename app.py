@@ -882,6 +882,15 @@ def login():
     >
 
     <label for="email">Email address</label>
+    <input
+        id="email"
+        name="email"
+        type="email"
+        required
+        value="{{ request.form.get('email', '') }}"
+    >
+
+    <label for="email">Email address</label>
 
             <label for="password">Password</label>
             <input
