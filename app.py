@@ -740,28 +740,6 @@ def register():
 
         referrer = None
 
-        if not all([full_name, email, phone, password]):
-            flash(
-                "Please complete all required fields.",
-                "error",
-            )
-
-        elif len(password) < 8:
-            flash(
-                "Your password must be at least 8 characters long.",
-                "error",
-            )
-
-        elif password != confirm_password:
-            flash(
-                "The passwords do not match.",
-                "error",
-            )
-
-        elif User.query.filter_by(email=email).first():
-            flash(
-                "An account with that email already exists. Please log in.",
-                "error",
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
