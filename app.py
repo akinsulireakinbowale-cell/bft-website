@@ -1167,7 +1167,116 @@ def dashboard():
         wallet=wallet,
     )
 
+@app.route("/transaction-history")
+@login_required
+def transaction_history():
+    user = get_current_user()
+    wallet = Wallet.query.filter_by(user_id=user.id).first()
+    transactions = []
 
+    if wallet:
+        transactions = WalletTransaction.query.filter_by(
+            wallet_id=wallet.id
+        ).order_by(WalletTransaction.created_at.desc()).all()
+
+    body = """
+    <section class="card">
+        <h1>Transaction History</h1>
+        {% if transactions %}
+            <table>
+                <tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr>
+                {% for item in transactions %}
+                <tr>
+                    <td>{{ item.created_at }}</td>
+                    <td>{{ item.transaction_type }}</td>
+                    <td>₦{{ item.amount }}</td>
+                    <td>{{ item.status }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p>No transactions found.</p>
+        {% endif %}
+        <a class="button" href="{{ url_for('dashboard') }}">Back to My Account</a>
+    </section>
+    """
+    return page("Transaction History", body, transactions=transactions)
+
+
+@app.route("/deposit-history")
+@login_required
+def deposit_history():
+    user = get_current_user()
+    wallet = Wallet.query.filter_by(user_id=user.id).first()
+    transactions = []
+
+    if wallet:
+        transactions = WalletTransaction.query.filter_by(
+            wallet_id=wallet.id,
+            transaction_type="deposit"
+        ).order_by(WalletTransaction.created_at.desc()).all()
+
+    body = """
+    <section class="card">
+        <h1>Deposit History</h1>
+        {% if transactions %}
+            {% for item in transactions %}
+                <p>₦{{ item.amount }} — {{ item.status }} — {{ item.created_at }}</p>
+            {% endfor %}
+        {% else %}
+            <p>No deposit history found.</p>
+        {% endif %}
+        <a class="button" href="{{ url_for('dashboard') }}">Back to My Account</a>
+    </section>
+    """
+    return page("Deposit History", body, transactions=transactions)
+
+
+@app.route("/withdrawal-history")
+@login_required
+def withdrawal_history():
+    user = get_current_user()
+    wallet = Wallet.query.filter_by(user_id=user.id).first()
+    transactions = []
+
+    if wallet:
+        transactions = WalletTransaction.query.filter_by(
+            wallet_id=wallet.id,
+            transaction_type="withdrawal"
+        ).order_by(WalletTransaction.created_at.desc()).all()
+
+    body = """
+    <section class="card">
+        <h1>Withdrawal History</h1>
+        {% if transactions %}
+            {% for item in transactions %}
+                <p>₦{{ item.amount }} — {{ item.status }} — {{ item.created_at }}</p>
+            {% endfor %}
+        {% else %}
+            <p>No withdrawal history found.</p>
+        {% endif %}
+        <a class="button" href="{{ url_for('dashboard') }}">Back to My Account</a>
+    </section>
+    """
+    return page("Withdrawal History", body, transactions=transactions)
+
+
+@app.route("/gift-code")
+@login_required
+def gift_code_page():
+    body = """
+    <section class="card">
+        <h1>Gift Code</h1>
+        <form method="POST" action="{{ url_for('redeem_gift_code') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>Enter Gift Code</label>
+            <input type="text" name="code" required>
+            <button type="submit">Redeem Code</button>
+        </form>
+        <a class="button" href="{{ url_for('dashboard') }}">Back to My Account</a>
+    </section>
+    """
+    return page("Gift Code", body)
 
 # ==========================================
 # MARKET PAGE
