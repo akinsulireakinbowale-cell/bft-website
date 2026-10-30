@@ -1783,6 +1783,15 @@ def admin_dashboard():
 
                 {% if user_is_active(member) %}
                     <form method="post"
+                    >
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <label for="full_name">Full Name</label>
                           action="{{ url_for('admin_deactivate_user', user_id=member.id) }}"
                           onsubmit="return confirm('Deactivate this user?');">
                         <button type="submit">Deactivate</button>
