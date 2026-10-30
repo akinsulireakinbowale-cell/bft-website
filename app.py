@@ -758,27 +758,30 @@ def page(title, body, **context):
 
 @app.route("/")
 def home():
-    if get_current_user():
-        return redirect(url_for("dashboard"))
-
     return page(
         "Home",
         """
         <section class="card">
             <h1>Welcome to BFT</h1>
 
-            <p>
-                Create an account or log in to access
-                your dashboard.
-            </p>
+            <p>Welcome to your BFT home page.</p>
 
-            <a class="button" href="{{ url_for('register') }}">
-                Create account
-            </a>
+            <p>Explore the Market, check your Team,
+            and manage your account.</p>
 
-            <a class="button" href="{{ url_for('login') }}">
-                Log in
-            </a>
+            {% if not current_user %}
+                <a class="button" href="{{ url_for('register') }}">
+                    Create Account
+                </a>
+
+                <a class="button" href="{{ url_for('login') }}">
+                    Log In
+                </a>
+            {% else %}
+                <a class="button" href="{{ url_for('market') }}">
+                    Explore Market
+                </a>
+            {% endif %}
         </section>
         """,
     )
