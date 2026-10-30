@@ -336,6 +336,84 @@ class GiftCodeRedemption(db.Model):
         ),
     )
 
+@app.route("/card-bank", methods=["GET", "POST"])
+@login_required
+def card_bank():
+    user = get_current_user()
+
+    details = BankDetails.query.filter_by(
+        user_id=user.id
+    ).first()
+
+    if request.method == "POST":
+        bank_name = request.form.get("bank_name", "").strip()
+        account_name = request.form.get("account_name", "").strip()
+        account_number = request.form.get("account_number", "").strip()
+
+        if not all([bank_name, account_name, account_number]):
+            flash("Please complete all bank details.")
+            return redirect(url_for("card_bank"))
+
+        if len(bank_name) > 120 or len(account_name) > 120:
+            flash("Bank details are too long.")
+            return redirect(url_for("card_bank"))
+
+        if len(account_number) > 30 or not account_number.isdigit():
+            flash("Please enter a valid account number.")
+            return redirect(url_for("card_bank"))
+
+        if details is None:
+            details = BankDetails(user_id=user.id)
+            db.session.add(details)
+
+        details.bank_name = bank_name
+        details.account_name = account_name
+        details.account_number = account_number
+
+        db.session.commit()
+
+        flash("Your bank details have been saved.")
+        return redirect(url_for("card_bank"))
+
+    body = """
+    <section class="card">
+        <h1>My Card Bank</h1>
+        <p>Save your bank details for future withdrawals.</p>
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <label>Bank Name</label>
+            <input name="bank_name"
+                   maxlength="120"
+                   value="{{ details.bank_name if details else '' }}"
+                   required>
+
+            <label>Account Name</label>
+            <input name="account_name"
+                   maxlength="120"
+                   value="{{ details.account_name if details else '' }}"
+                   required>
+
+            <label>Account Number</label>
+            <input name="account_number"
+                   inputmode="numeric"
+                   maxlength="30"
+                   value="{{ details.account_number if details else '' }}"
+                   required>
+
+            <button type="submit">Save Bank Details</button>
+        </form>
+
+        <a class="button" href="{{ url_for('dashboard') }}">
+            Back to My Page
+        </a>
+    </section>
+    """
+
+    return page("Card Bank", body, details=details)
+
 # ==========================================
 # USER AND REFERRAL FUNCTIONS
 # ==========================================
@@ -1104,60 +1182,214 @@ def dashboard():
         db.session.add(wallet)
         db.session.commit()
 
-    body = """
-    <section class="card">
-        <p class="muted">TOTAL WALLET BALANCE</p>
+    gift_rewards = db.session.query(
+        db.func.coalesce(db.func.sum(GiftCode.amount), 0)
+    ).join(
+        GiftCodeRedemption,
+        GiftCodeRedemption.gift_code_id == GiftCode.id
+    ).filter(
+        GiftCodeRedemption.user_id == user.id
+    ).scalar()
 
-        <h1 style="font-size:32px; color:#1769aa;">
+    body = """
+    <style>
+        .my-profile {
+            background: linear-gradient(110deg, #ef4858, #ff982f);
+            color: white;
+            padding: 25px 20px 45px;
+            border-radius: 20px 20px 35px 35px;
+            margin: -10px -5px 0;
+        }
+
+        .my-profile h2 {
+            margin: 0;
+            font-size: 21px;
+        }
+
+        .my-profile p {
+            margin: 6px 0;
+            font-size: 12px;
+        }
+
+        .my-balance {
+            background: white;
+            color: #222;
+            padding: 20px;
+            border-radius: 20px;
+            margin: -28px 0 15px;
+            position: relative;
+            box-shadow: 0 5px 18px rgba(0,0,0,.07);
+        }
+
+        .my-balance h1 {
+            font-size: 30px;
+            margin: 8px 0;
+            color: #171717;
+        }
+
+        .my-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            background: white;
+            padding: 17px 8px;
+            border-radius: 20px;
+            margin-bottom: 22px;
+        }
+
+        .my-action {
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .my-icon {
+            width: 43px;
+            height: 43px;
+            margin: 0 auto 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 19px;
+            background: linear-gradient(135deg, #ef4858, #ff982f);
+        }
+
+        .my-heading {
+            font-size: 16px;
+            margin: 18px 5px 10px;
+            color: #555;
+        }
+
+        .my-menu {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 17px;
+            text-decoration: none;
+            color: #292929;
+            box-shadow: 0 3px 12px rgba(0,0,0,.035);
+        }
+
+        .my-menu-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #fff1ed;
+            color: #e95a63;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+        }
+
+        .my-menu-text {
+            flex: 1;
+        }
+
+        .my-menu-text strong {
+            display: block;
+            font-size: 14px;
+        }
+
+        .my-menu-text small {
+            color: #888;
+            font-size: 11px;
+        }
+
+        .my-arrow {
+            color: #bbb;
+        }
+    </style>
+
+    <div class="my-profile">
+        <h2>{{ user.full_name }}</h2>
+        <p>Account ID: {{ user.id }}</p>
+    </div>
+
+    <section class="my-balance">
+        <small style="color:#888;">TOTAL BALANCE</small>
+
+        <h1>
             ₦{{ "%.2f"|format(wallet.balance) }}
         </h1>
 
-        <div style="display:flex; gap:12px; margin-top:20px;">
-            <a class="button"
-               href="{{ url_for('deposit_funds') }}"
-               style="flex:1; text-align:center;">
-                Deposit
-            </a>
+        <p style="color:#888; font-size:12px;">
+            Your BFT wallet balance
+        </p>
+    </section>
 
-            <a class="button danger"
-               href="{{ url_for('request_withdrawal') }}"
-               style="flex:1; text-align:center;">
-                Withdraw
-            </a>
+    <section class="my-actions">
+        <a class="my-action"
+           href="{{ url_for('deposit_funds') }}">
+            <div class="my-icon">▣</div>
+            Recharge
+        </a>
+
+        <a class="my-action"
+           href="{{ url_for('request_withdrawal') }}">
+            <div class="my-icon">₦</div>
+            Withdraw
+        </a>
+
+        <a class="my-action"
+           href="{{ url_for('order') }}">
+            <div class="my-icon">▤</div>
+            My Order
+        </a>
+
+        <a class="my-action"
+           href="{{ url_for('card_bank') }}">
+            <div class="my-icon">▣</div>
+            Card Bank
+        </a>
+    </section>
+
+    <h3 class="my-heading">My Business</h3>
+
+    <a class="my-menu" href="{{ url_for('team') }}">
+        <div class="my-menu-icon">👥</div>
+        <div class="my-menu-text">
+            <strong>Team</strong>
+            <small>Invite friends and view your team</small>
         </div>
-    </section>
+        <span class="my-arrow">›</span>
+    </a>
 
-    <section class="card">
-        <h2>Account Activities</h2>
+    <div class="my-menu">
+        <div class="my-menu-icon">🎁</div>
+        <div class="my-menu-text">
+            <strong>Rewards</strong>
+            <small>
+                Total earned: ₦{{ "%.2f"|format(gift_rewards) }}
+            </small>
+        </div>
+        <span class="my-arrow">›</span>
+    </div>
 
-        <p>
-            <a class="button"
-               href="{{ url_for('transaction_history') }}">
-                Transaction History
-            </a>
-        </p>
+    <a class="my-menu" href="{{ url_for('gift_code_page') }}">
+        <div class="my-menu-icon">🎀</div>
+        <div class="my-menu-text">
+            <strong>Gift Code</strong>
+            <small>Redeem your gift code</small>
+        </div>
+        <span class="my-arrow">›</span>
+    </a>
 
-        <p>
-            <a class="button"
-               href="{{ url_for('deposit_history') }}">
-                Deposit History
-            </a>
-        </p>
-
-        <p>
-            <a class="button"
-               href="{{ url_for('withdrawal_history') }}">
-                Withdrawal History
-            </a>
-        </p>
-
-        <p>
-            <a class="button"
-               href="{{ url_for('gift_code_page') }}">
-                Gift Code
-            </a>
-        </p>
-    </section>
+    <div class="my-menu">
+        <div class="my-menu-icon">⬇</div>
+        <div class="my-menu-text">
+            <strong>Download App</strong>
+            <small>Coming Soon</small>
+        </div>
+        <span class="my-arrow">›</span>
+    </div>
     """
 
     return page(
@@ -1165,7 +1397,8 @@ def dashboard():
         body,
         user=user,
         wallet=wallet,
-    )
+        gift_rewards=gift_rewards,
+        )
 
 @app.route("/transaction-history")
 @login_required
@@ -1956,6 +2189,28 @@ def request_withdrawal():
         body,
         user=user,
         wallet=wallet,
+    )
+
+class BankDetails(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    bank_name = db.Column(db.String(120), nullable=False)
+    account_name = db.Column(db.String(120), nullable=False)
+    account_number = db.Column(db.String(30), nullable=False)
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
     )
 
 # ==========================================
