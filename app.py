@@ -464,6 +464,7 @@ STYLE = """
 
 body {
     margin: 0;
+    padding-bottom: 90px;
     background: #f4f7fb;
     color: #182230;
     font-family: Arial, sans-serif;
@@ -582,6 +583,43 @@ td {
     min-width: 220px;
 }
 
+/* BOTTOM NAVIGATION */
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px 4px;
+    box-shadow: 0 -3px 12px #00000012;
+    border-top: 1px solid #e2e8f0;
+    z-index: 9999;
+}
+
+.bottom-nav a {
+    flex: 1;
+    text-align: center;
+    text-decoration: none;
+    color: #9299a3;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 5px 2px;
+}
+
+.bottom-nav a.active {
+    color: #e02020;
+}
+
+.bottom-nav .nav-icon {
+    display: block;
+    font-size: 21px;
+    margin-bottom: 4px;
+}
+
 @media (max-width: 600px) {
     header a {
         margin-left: 0;
@@ -592,6 +630,10 @@ td {
     td {
         padding: 8px;
         font-size: 13px;
+    }
+
+    .bottom-nav a {
+        font-size: 11px;
     }
 }
 """
@@ -608,12 +650,14 @@ def page(title, body, **context):
         content="width=device-width, initial-scale=1"
     >
     <title>{{ title }} | BFT</title>
+
     <style>
     """ + STYLE + """
     </style>
 </head>
 
 <body>
+
 <header>
     <strong>BFT</strong>
 
@@ -623,8 +667,10 @@ def page(title, body, **context):
                 Dashboard
             </a>
 
-                        {% if current_user_is_admin %}
-                <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+            {% if current_user_is_admin %}
+                <a href="{{ url_for('admin_dashboard') }}">
+                    Admin Dashboard
+                </a>
             {% endif %}
 
             <a href="{{ url_for('logout') }}">
@@ -653,6 +699,41 @@ def page(title, body, **context):
 
     """ + body + """
 </main>
+
+<nav class="bottom-nav">
+
+    <a href="{{ url_for('home') }}"
+       class="{% if request.endpoint == 'home' %}active{% endif %}">
+        <span class="nav-icon">⌂</span>
+        Home
+    </a>
+
+    <a href="{{ url_for('market') }}"
+       class="{% if request.endpoint == 'market' %}active{% endif %}">
+        <span class="nav-icon">▣</span>
+        Market
+    </a>
+
+    <a href="{{ url_for('order') }}"
+       class="{% if request.endpoint == 'order' %}active{% endif %}">
+        <span class="nav-icon">▤</span>
+        Order
+    </a>
+
+    <a href="{{ url_for('team') }}"
+       class="{% if request.endpoint == 'team' %}active{% endif %}">
+        <span class="nav-icon">♧</span>
+        Team
+    </a>
+
+    <a href="{{ url_for('dashboard') }}"
+       class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon">♙</span>
+        My
+    </a>
+
+</nav>
+
 </body>
 </html>
 """
@@ -669,87 +750,6 @@ def page(title, body, **context):
 
     return render_template_string(template, **values)
 
-
-# ==========================================
-# REGISTRATION FORM
-# ==========================================
-
-REGISTER_FORM = """
-<section class="card">
-    <h1>Create your BFT account</h1>
-
-    <form method="post">
-        <label for="full_name">Full name</label>
-        <input
-            id="full_name"
-            name="full_name"
-            maxlength="120"
-            required
-            value="{{ request.form.get('full_name', '') }}"
-        >
-
-        <label for="email">Email address</label>
-        <input
-            id="email"
-            name="email"
-            type="email"
-            maxlength="150"
-            required
-            value="{{ request.form.get('email', '') }}"
-        >
-
-        <label for="phone">Phone number</label>
-        <input
-            id="phone"
-            name="phone"
-            maxlength="40"
-            required
-            value="{{ request.form.get('phone', '') }}"
-        >
-
-        <label for="password">
-            Password (at least 8 characters)
-        </label>
-        <input
-            id="password"
-            name="password"
-            type="password"
-            minlength="8"
-            required
-        >
-
-        <label for="confirm_password">
-            Confirm password
-        </label>
-        <input
-            id="confirm_password"
-            name="confirm_password"
-            type="password"
-            minlength="8"
-            required
-        >
-
-        <label for="referral_code">
-            Referral code (optional)
-        </label>
-        <input
-            id="referral_code"
-            name="referral_code"
-            maxlength="30"
-            value="{{ request.form.get('referral_code', '') }}"
-        >
-
-        <p>
-            <button type="submit">Register</button>
-        </p>
-    </form>
-
-    <p>
-        Already registered?
-        <a href="{{ url_for('login') }}">Log in</a>.
-    </p>
-</section>
-"""
 
 
 # ==========================================
