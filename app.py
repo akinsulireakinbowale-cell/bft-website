@@ -2237,112 +2237,15 @@ def admin_deactivate_user(user_id):
         flash("User not found.", "error")
     else:
         if is_admin(target):
-            flash("You cannot deactivate the administrator account.", "error")
+            flash(
+                "You cannot deactivate the administrator account.",
+                "error",
+            )
         else:
             set_user_active(target, False)
             flash("User deactivated successfully.", "success")
 
     return redirect(url_for("admin_dashboard"))
-
-@app.route(
-    "/admin/users/<int:user_id>/edit",
-    methods=["GET", "POST"],
-)
-@admin_required
-def admin_edit_user(user_id):
-    target = db.session.get(User, user_id)
-
-    if target is None:
-        flash("User not found.", "error")
-        return redirect(url_for("admin_dashboard"))
-
-    if request.method == "POST":
-        full_name = request.form.get("full_name", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        phone = request.form.get("phone", "").strip()
-
-        if not full_name or not email:
-            flash("Name and email are required.", "error")
-            return redirect(
-                url_for("admin_edit_user", user_id=user_id)
-            )
-
-        existing_email = User.query.filter(
-            db.func.lower(User.email) == email,
-            User.id != user_id,
-        ).first()
-
-        if existing_email:
-            flash("That email address is already in use.", "error")
-            return redirect(
-                url_for("admin_edit_user", user_id=user_id)
-            )
-
-        target.full_name = full_name
-        target.email = email
-        target.phone = phone
-
-        try:
-            db.session.commit()
-            flash("User details updated successfully.", "success")
-            return redirect(url_for("admin_dashboard"))
-        except Exception:
-            db.session.rollback()
-            app.logger.exception("Failed to update user details.")
-            flash("Could not update user details.", "error")
-            return redirect(
-                url_for("admin_edit_user", user_id=user_id)
-            )
-
-    body = """
-    <section class="card">
-        <h1>Edit User</h1>
-
-        <form method="post">
-            <label for="full_name">Full Name</label>
-            <input
-                id="full_name"
-                name="full_name"
-                value="{{ target.full_name }}"
-                maxlength="120"
-                required
-            >
-
-            <label for="email">Email</label>
-            <input
-                id="email"
-                name="email"
-                type="email"
-                value="{{ target.email }}"
-                maxlength="150"
-                required
-            >
-
-            <label for="phone">Phone</label>
-            <input
-                id="phone"
-                name="phone"
-                value="{{ target.phone }}"
-                maxlength="40"
-            >
-
-            <button type="submit">Save Changes</button>
-        </form>
-
-        <p>
-            <a class="button"
-               href="{{ url_for('admin_dashboard') }}">
-                Back to Admin Dashboard
-            </a>
-        </p>
-    </section>
-    """
-
-    return page(
-        "Edit User",
-        body,
-        target=target,
-)
 
 
 # ==========================================
