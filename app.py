@@ -1200,6 +1200,20 @@ def deposit_funds():
     if user is None:
         return redirect(url_for("login"))
 
+<div class="card">
+    <h2>Bank Transfer Details</h2>
+
+    <p><strong>Bank Name:</strong> 9Payment Service Bank (9PSB)</p>
+    <p><strong>Account Name:</strong> AmeX Network</p>
+    <p><strong>Account Number:</strong> 6718461313</p>
+
+    <p>
+        Transfer your deposit to the account above.
+        After making the transfer, complete the deposit
+        request form and provide your payment reference.
+    </p>
+</div>
+    
     if request.method == "POST":
         sender_name = request.form.get(
             "sender_name", ""
