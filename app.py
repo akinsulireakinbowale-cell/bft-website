@@ -922,9 +922,11 @@ def register():
             "confirm_password", ""
         )
 
-        referral_input = request.form.get(
-            "referral_code", ""
-        ).strip().upper()
+        referral_input = (
+    request.form.get("referral_code")
+    or request.args.get("ref")
+    or ""
+).strip().upper()
 
         referrer = None
 
