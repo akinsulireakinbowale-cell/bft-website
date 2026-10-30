@@ -663,7 +663,7 @@ def page(title, body, **context):
 
     <nav>
         {% if current_user %}
-            <a href="{{ url_for('dashboard') }}">
+            <a href="{{ url_for('my_wallet') }}">
                 Dashboard
             </a>
 
@@ -1231,81 +1231,130 @@ def my_wallet():
             balance=0,
             currency="NGN",
         )
-
         db.session.add(wallet)
         db.session.commit()
 
-    transactions = WalletTransaction.query.filter_by(
+    history_type = request.args.get("history", "all")
+
+    transaction_query = WalletTransaction.query.filter_by(
         wallet_id=wallet.id
-    ).order_by(
+    )
+
+    if history_type == "deposit":
+        transaction_query = transaction_query.filter_by(
+            transaction_type="deposit"
+        )
+
+    elif history_type == "withdrawal":
+        transaction_query = transaction_query.filter_by(
+            transaction_type="withdrawal"
+        )
+
+    transactions = transaction_query.order_by(
         WalletTransaction.created_at.desc()
     ).limit(50).all()
 
     body = """
     <section class="card">
-        <h1>My Wallet</h1>
+        <p class="muted">TOTAL WALLET BALANCE</p>
 
-        <p>Your available wallet balance:</p>
+        <h1 style="font-size: 32px; color: #1769aa;">
+            ₦{{ "%.2f"|format(wallet.balance) }}
+        </h1>
 
-        <h2>
-            {{ wallet.currency }}
-            {{ "%.2f"|format(wallet.balance) }}
-        </h2>
+        <p class="muted">Available balance</p>
 
-<p>
-    <a class="button" href="{{ url_for('deposit_funds') }}">
-        Deposit Funds
-    </a>
-</p>
+        <div style="
+            display: flex;
+            gap: 12px;
+            margin-top: 22px;
+        ">
+            <a class="button"
+               href="{{ url_for('deposit_funds') }}"
+               style="flex: 1; text-align: center;">
+                Deposit
+            </a>
 
-<p>
-    <a class="button" href="{{ url_for('request_withdrawal') }}">
-        Withdraw Funds
-    </a>
-</p>
-
-        <p class="muted">
-            Your wallet balance is displayed in Nigerian naira.
-        </p>
+            <a class="button danger"
+               href="{{ url_for('request_withdrawal') }}"
+               style="flex: 1; text-align: center;">
+                Withdraw
+            </a>
+        </div>
     </section>
 
     <section class="card">
-        <h2>Transaction History</h2>
+        <h2>Account Activities</h2>
 
-<section class="card">
-    <h2>Redeem Gift Code</h2>
+        <p>
+            <a class="button"
+               href="{{ url_for('my_wallet', history='all') }}">
+                Transaction History
+            </a>
+        </p>
 
-    <p>
-        Enter your daily gift code to receive ₦100
-        in your wallet.
-    </p>
+        <p>
+            <a class="button"
+               href="{{ url_for('my_wallet', history='deposit') }}">
+                Deposit History
+            </a>
+        </p>
 
-    <form
-        method="POST"
-        action="{{ url_for('redeem_gift_code') }}"
-    >
-        <input
-            type="hidden"
-            name="csrf_token"
-            value="{{ csrf_token() }}"
-        >
+        <p>
+            <a class="button"
+               href="{{ url_for('my_wallet', history='withdrawal') }}">
+                Withdrawal History
+            </a>
+        </p>
 
-        <label for="gift_code">Gift Code</label>
+        <p>
+            <a class="button"
+               href="#gift-code">
+                Gift Code
+            </a>
+        </p>
+    </section>
 
-        <input
-            type="text"
-            id="gift_code"
-            name="gift_code"
-            placeholder="Enter your gift code"
-            maxlength="50"
-            required
-        >
+    <section class="card" id="gift-code">
+        <h2>Redeem Gift Code</h2>
 
-        <button type="submit">
-            Redeem ₦100
-        </button>
-    </form>
-</section>
+        <p>
+            Enter your daily gift code to receive ₦100
+            in your wallet.
+        </p>
+
+        <form method="POST"
+              action="{{ url_for('redeem_gift_code') }}">
+
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <label for="gift_code">Gift Code</label>
+
+            <input type="text"
+                   id="gift_code"
+                   name="gift_code"
+                   placeholder="Enter your gift code"
+                   maxlength="50"
+                   required>
+
+            <button type="submit">
+                Redeem ₦100
+            </button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>
+            {% if history_type == "deposit" %}
+                Deposit History
+            {% elif history_type == "withdrawal" %}
+                Withdrawal History
+            {% else %}
+                Transaction History
+            {% endif %}
+        </h2>
 
         {% if transactions %}
             <div class="table-wrap">
@@ -1316,51 +1365,48 @@ def my_wallet():
                             <th>Type</th>
                             <th>Amount</th>
                             <th>Status</th>
-                            <th>Description</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         {% for transaction in transactions %}
-                            <tr>
-                                <td>
-                                    {{ transaction.created_at.strftime("%d %b %Y") }}
-                                </td>
+                        <tr>
+                            <td>
+                                {{ transaction.created_at.strftime("%d %b %Y") }}
+                            </td>
 
-                                <td>
-                                    {{ transaction.transaction_type|title }}
-                                </td>
+                            <td>
+                                {{ transaction.transaction_type|title }}
+                            </td>
 
-                                <td>
-                                    {{ wallet.currency }}
-                                    {{ "%.2f"|format(transaction.amount) }}
-                                </td>
+                            <td>
+                                ₦{{ "%.2f"|format(transaction.amount) }}
+                            </td>
 
-                                <td>
-                                    {{ transaction.status|title }}
-                                </td>
-
-                                <td>
-                                    {{ transaction.description }}
-                                </td>
-                            </tr>
+                            <td>
+                                {{ transaction.status|title }}
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <p>You have no transactions yet.</p>
+            <p>No records found.</p>
         {% endif %}
     </section>
     """
 
     return page(
-        "My Wallet",
+        "My Account",
         body,
         user=user,
         wallet=wallet,
         transactions=transactions,
-    )
+        history_type=history_type,
+        )
+
+
 
 @app.route("/redeem-gift-code", methods=["POST"])
 @login_required
