@@ -1440,6 +1440,7 @@ def request_withdrawal():
         </p>
 
         <form method="post">
+        
         <input
     type="hidden"
     name="csrf_token"
