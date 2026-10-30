@@ -2451,6 +2451,10 @@ def admin_dashboard():
         )
 
     users = query.order_by(User.id.desc()).all()
+    referral_statuses = {
+    status.user_id: status.is_active
+    for status in ReferralCodeStatus.query.all()
+    }
 
     total_users = User.query.count()
 
@@ -2597,6 +2601,59 @@ def admin_dashboard():
                     {{ member.referred_by or "None" }}
                 </p>
 
+                <p>
+    <strong>Referral Code Status:</strong>
+
+    {% if referral_statuses.get(member.id, True) %}
+        <span style="color: green;">Active</span>
+    {% else %}
+        <span style="color: red;">Disabled</span>
+    {% endif %}
+</p>
+
+{% if referral_statuses.get(member.id, True) %}
+
+    <form
+        method="POST"
+        action="{{ url_for(
+            'admin_disable_referral_code',
+            user_id=member.id
+        ) }}"
+        onsubmit="return confirm('Disable this referral code?');"
+    >
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ csrf_token() }}"
+        >
+
+        <button type="submit">
+            Disable Referral Code
+        </button>
+    </form>
+
+{% else %}
+
+    <form
+        method="POST"
+        action="{{ url_for(
+            'admin_enable_referral_code',
+            user_id=member.id
+        ) }}"
+    >
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ csrf_token() }}"
+        >
+
+        <button type="submit">
+            Enable Referral Code
+        </button>
+    </form>
+
+{% endif %}
+
 
                 <!-- EDIT USER -->
 
@@ -2697,6 +2754,7 @@ def admin_dashboard():
         active_users=active_users,
         inactive_users=inactive_users,
         user_is_active=user_is_active,
+        referral_statuses=referral_statuses,
     )
 
 @app.route(
