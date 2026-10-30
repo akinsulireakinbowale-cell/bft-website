@@ -7,6 +7,8 @@ from functools import wraps
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
+from datetime import timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from flask import (
     Flask,
@@ -1902,6 +1904,17 @@ def admin_dashboard():
         </p>
 
 
+<h2>Gift Code Management</h2>
+
+<p>
+    <a
+        class="button"
+        href="{{ url_for('admin_gift_codes') }}"
+    >
+        Create and Manage Gift Codes
+    </a>
+</p>
+
         <!-- REGISTERED USERS -->
 
         <h2>Registered Users</h2>
@@ -2039,6 +2052,107 @@ def admin_dashboard():
         user_is_active=user_is_active,
     )
 
+@app.route("/admin/gift-codes", methods=["GET", "POST"])
+@admin_required
+def admin_gift_codes():
+
+    if request.method == "POST":
+        local_now = datetime.now(ZoneInfo("Africa/Lagos"))
+
+        tomorrow = local_now.date() + timedelta(days=1)
+
+        expiry_local = datetime.combine(
+            tomorrow,
+            datetime.min.time(),
+            tzinfo=ZoneInfo("Africa/Lagos"),
+        )
+
+        expiry_utc = expiry_local.astimezone(
+            timezone.utc
+        ).replace(tzinfo=None)
+
+        code = "BFT-" + secrets.token_hex(4).upper()
+
+        while GiftCode.query.filter_by(code=code).first():
+            code = "BFT-" + secrets.token_hex(4).upper()
+
+        gift_code = GiftCode(
+            code=code,
+            amount=Decimal("100.00"),
+            max_redemptions=20,
+            redeemed_count=0,
+            expires_at=expiry_utc,
+            is_active=True,
+        )
+
+        db.session.add(gift_code)
+        db.session.commit()
+
+        flash("Gift code created successfully: " + code)
+
+        return redirect(url_for("admin_gift_codes"))
+
+    gift_codes = GiftCode.query.order_by(
+        GiftCode.created_at.desc()
+    ).all()
+
+    body = """
+    <section class="card">
+        <h1>Gift Code Management</h1>
+
+        <p>Reward per user: ₦100</p>
+        <p>Maximum users per code: 20</p>
+        <p>Total reward budget: ₦2,000</p>
+
+        <form method="POST">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <button type="submit">
+                Create New Gift Code
+            </button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>Created Gift Codes</h2>
+
+        {% for gift in gift_codes %}
+            <div class="card">
+                <h3>{{ gift.code }}</h3>
+
+                <p>Reward: ₦{{ "%.2f"|format(gift.amount) }}</p>
+
+                <p>
+                    Redemptions:
+                    {{ gift.redeemed_count }}/{{ gift.max_redemptions }}
+                </p>
+
+                <p>
+                    Expires:
+                    {{ gift.expires_at.strftime("%d %b %Y %H:%M") }}
+                    UTC
+                </p>
+
+                <p>
+                    Status:
+                    {{ "Active" if gift.is_active else "Inactive" }}
+                </p>
+            </div>
+        {% else %}
+            <p>No gift codes created yet.</p>
+        {% endfor %}
+    </section>
+    """
+
+    return page(
+        "Gift Code Management",
+        body,
+        gift_codes=gift_codes,
+    )
 
 # ==========================================
 # EDIT USER
