@@ -4,6 +4,8 @@ import string
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from functools import wraps
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from flask import (
     Flask,
@@ -817,9 +819,8 @@ def register():
 # ==========================================
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def login():
-    if request.method == "POST":
-        email = request.form.get(
             "email",
             "",
         ).strip().lower()
@@ -893,9 +894,7 @@ def login():
 
     return page("Log in", body)
 
-@app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
-def login():
+
 
 # ==========================================
 # USER DASHBOARD
