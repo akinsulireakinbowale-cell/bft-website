@@ -777,6 +777,57 @@ def register():
                     )
                     return page("Register", REGISTER_FORM)
 
+            <form method="post">
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <label for="full_name">Full Name</label>
+    <input
+        type="text"
+        id="full_name"
+        name="full_name"
+        required
+    >
+
+    <label for="email">Email Address</label>
+    <input
+        type="email"
+        id="email"
+        name="email"
+        required
+    >
+
+    <label for="phone">Phone Number</label>
+    <input
+        type="text"
+        id="phone"
+        name="phone"
+        required
+    >
+
+    <label for="password">Password</label>
+    <input
+        type="password"
+        id="password"
+        name="password"
+        required
+    >
+
+    <label for="referral_code">Referral Code (Optional)</label>
+    <input
+        type="text"
+        id="referral_code"
+        name="referral_code"
+    >
+
+    <button type="submit">Create Account</button>
+
+</form>
+
             user = User(
                 full_name=full_name,
                 email=email,
