@@ -253,6 +253,87 @@ class UserStatus(db.Model):
     )
 
 
+class GiftCode(db.Model):
+    id = db.Column(
+        db.Integer,
+        primary_key=True,
+    )
+
+    code = db.Column(
+        db.String(50),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    amount = db.Column(
+        db.Numeric(12, 2),
+        nullable=False,
+        default=100,
+    )
+
+    max_redemptions = db.Column(
+        db.Integer,
+        nullable=False,
+        default=20,
+    )
+
+    redeemed_count = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0,
+    )
+
+    expires_at = db.Column(
+        db.DateTime,
+        nullable=False,
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True,
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+
+class GiftCodeRedemption(db.Model):
+    id = db.Column(
+        db.Integer,
+        primary_key=True,
+    )
+
+    gift_code_id = db.Column(
+        db.Integer,
+        db.ForeignKey("gift_code.id"),
+        nullable=False,
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+    )
+
+    redeemed_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "gift_code_id",
+            "user_id",
+            name="unique_gift_code_user",
+        ),
+    )
+
 # ==========================================
 # USER AND REFERRAL FUNCTIONS
 # ==========================================
