@@ -10,6 +10,7 @@ from flask_wtf.csrf import CSRFProtect
 from datetime import timedelta, timezone
 from zoneinfo import ZoneInfo
 from flask_login import login_required
+from decimal import Decimal
 
 from flask import (
     Flask,
@@ -902,51 +903,28 @@ def home():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        full_name = request.form.get(
-            "full_name", ""
-        ).strip()
-
-        email = request.form.get(
-            "email", ""
-        ).strip().lower()
-
-        phone = request.form.get(
-            "phone", ""
-        ).strip()
-
-        password = request.form.get(
-            "password", ""
-        )
-
-        confirm_password = request.form.get(
-            "confirm_password", ""
-        )
+        full_name = request.form.get("full_name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        phone = request.form.get("phone", "").strip()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
 
         referral_input = (
-    request.form.get("referral_code")
-    or request.args.get("ref")
-    or ""
-).strip().upper()
+            request.form.get("referral_code")
+            or request.args.get("ref")
+            or ""
+        ).strip().upper()
 
         referrer = None
 
         if not all([full_name, email, phone, password]):
-            flash(
-                "Please complete all required fields.",
-                "error",
-            )
+            flash("Please complete all required fields.", "error")
 
         elif len(password) < 8:
-            flash(
-                "Your password must be at least 8 characters long.",
-                "error",
-            )
+            flash("Your password must be at least 8 characters long.", "error")
 
         elif password != confirm_password:
-            flash(
-                "The passwords do not match.",
-                "error",
-            )
+            flash("The passwords do not match.", "error")
 
         elif User.query.filter_by(email=email).first():
             flash(
@@ -1000,6 +978,40 @@ def register():
                     )
                 )
 
+                # Create or retrieve the new user's wallet.
+                wallet = Wallet.query.filter_by(
+                    user_id=user.id
+                ).first()
+
+                if wallet is None:
+                    wallet = Wallet(
+                        user_id=user.id,
+                        balance=Decimal("0.00"),
+                        currency="NGN",
+                    )
+                    db.session.add(wallet)
+                    db.session.flush()
+
+                # Credit the ₦500 welcome bonus.
+                welcome_amount = Decimal("500.00")
+                wallet.balance = (
+                    Decimal(str(wallet.balance or "0.00"))
+                    + welcome_amount
+                )
+
+                # Record the welcome bonus.
+                db.session.add(
+                    WalletTransaction(
+                        wallet_id=wallet.id,
+                        user_id=user.id,
+                        transaction_type="welcome_bonus",
+                        amount=welcome_amount,
+                        status="completed",
+                        reference=f"WELCOME-{user.id}",
+                        description="New user ₦500 welcome bonus",
+                    )
+                )
+
                 db.session.commit()
 
                 session.clear()
@@ -1007,7 +1019,8 @@ def register():
                 session["user_id"] = user.id
 
                 flash(
-                    "Your account has been created successfully.",
+                    "Your account has been created successfully. "
+                    "₦500 welcome bonus has been credited to your wallet.",
                     "success",
                 )
 
@@ -1023,7 +1036,6 @@ def register():
                 )
 
     return page("Register", body)
-
 # REGISTRATION HTML
 body = """
 <section class="card">
