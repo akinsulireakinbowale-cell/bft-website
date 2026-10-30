@@ -2185,7 +2185,7 @@ def request_withdrawal():
 
         <p>
             <a class="button" href="{{ url_for('my_wallet') }}">
-                Back to My Wallet
+                Back to My Page
             </a>
         </p>
     </section>
