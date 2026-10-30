@@ -1200,20 +1200,6 @@ def deposit_funds():
     if user is None:
         return redirect(url_for("login"))
 
-<div class="card">
-    <h2>Bank Transfer Details</h2>
-
-    <p><strong>Bank Name:</strong> 9Payment Service Bank (9PSB)</p>
-    <p><strong>Account Name:</strong> AmeX Network</p>
-    <p><strong>Account Number:</strong> 6718461313</p>
-
-    <p>
-        Transfer your deposit to the account above.
-        After making the transfer, complete the deposit
-        request form and provide your payment reference.
-    </p>
-</div>
-    
     if request.method == "POST":
         sender_name = request.form.get(
             "sender_name", ""
@@ -1276,22 +1262,29 @@ def deposit_funds():
         <h1>Deposit Funds</h1>
 
         <p>
-            Transfer money to the BFT bank account provided
-            by the administrator.
+            Transfer your deposit to the BFT receiving bank account below.
+        </p>
+
+        <h2>Bank Transfer Details</h2>
+
+        <p>
+            <strong>Bank Name:</strong>
+            9Payment Service Bank (9PSB)
         </p>
 
         <p>
-            <strong>Bank details:</strong>
+            <strong>Account Name:</strong>
+            AmeX Network
         </p>
 
         <p>
-            Contact the BFT administrator for the verified
-            bank name, account name, and account number.
+            <strong>Account Number:</strong>
+            6718461313
         </p>
 
         <p class="muted">
-            Do not transfer money until you have confirmed
-            the official account details.
+            After making your transfer, complete the form below
+            and provide your payment reference.
         </p>
     </section>
 
@@ -1299,11 +1292,12 @@ def deposit_funds():
         <h2>Submit Your Transfer</h2>
 
         <form method="POST" action="{{ url_for('deposit_funds') }}">
-<input
-    type="hidden"
-    name="csrf_token"
-    value="{{ csrf_token() }}"
->
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
 
             <label for="amount">Amount (NGN)</label>
             <input
@@ -1315,7 +1309,9 @@ def deposit_funds():
                 required
             >
 
-            <label for="sender_name">Account Name Used for Transfer</label>
+            <label for="sender_name">
+                Account Name Used for Transfer
+            </label>
             <input
                 type="text"
                 id="sender_name"
@@ -1324,7 +1320,9 @@ def deposit_funds():
                 required
             >
 
-            <label for="payment_reference">Transfer Reference</label>
+            <label for="payment_reference">
+                Transfer Reference
+            </label>
             <input
                 type="text"
                 id="payment_reference"
