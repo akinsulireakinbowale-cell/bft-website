@@ -2184,7 +2184,7 @@ def request_withdrawal():
         </form>
 
         <p>
-            <a class="button" href="{{ url_for('my_wallet') }}">
+            <a class="button" href="{{ url_for('dashboard') }}">
                 Back to My Page
             </a>
         </p>
