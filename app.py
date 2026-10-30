@@ -874,14 +874,14 @@ def login():
         <h1>Log in</h1>
 
         <form method="post">
-            <label for="email">Email address</label>
-            <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value="{{ request.form.get('email', '') }}"
-            >
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <label for="email">Email address</label>
 
             <label for="password">Password</label>
             <input
