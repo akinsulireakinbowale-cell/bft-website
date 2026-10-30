@@ -1568,12 +1568,100 @@ def market():
 @login_required
 def order():
     body = """
+    <style>
+        .order-header {
+            background: linear-gradient(135deg, #d62828, #f77f00);
+            color: white;
+            padding: 24px;
+            border-radius: 18px;
+            margin-bottom: 18px;
+        }
+
+        .order-box {
+            background: white;
+            border-radius: 16px;
+            padding: 22px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+            text-align: center;
+        }
+
+        .order-icon {
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+
+        .order-title {
+            color: #d62828;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .order-text {
+            color: #777;
+            line-height: 1.6;
+        }
+
+        .order-status {
+            display: inline-block;
+            background: #fff0e5;
+            color: #f07700;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .order-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #d62828, #f77f00);
+            color: white !important;
+            padding: 12px 22px;
+            border-radius: 10px;
+            text-decoration: none;
+            margin-top: 12px;
+        }
+    </style>
+
     <section class="card">
-        <h1>My Orders</h1>
-        <p>Your orders will appear here.</p>
+
+        <div class="order-header">
+            <h1>My Orders</h1>
+            <p>Manage and keep track of your orders.</p>
+        </div>
+
+        <div class="order-box">
+
+            <div class="order-icon">🛍️</div>
+
+            <div class="order-title">
+                Your Orders
+            </div>
+
+            <p class="order-text">
+                Your orders will appear here once
+                products and ordering are available.
+            </p>
+
+            <span class="order-status">
+                COMING SOON
+            </span>
+
+            <br>
+
+            <a
+                class="order-button"
+                href="{{ url_for('dashboard') }}"
+            >
+                Back to My Page
+            </a>
+
+        </div>
+
     </section>
     """
-    return page("Order", body)
+
+    return page("My Orders", body)
 
 
 # ==========================================
