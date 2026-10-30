@@ -1285,6 +1285,11 @@ def deposit_funds():
         <h2>Submit Your Transfer</h2>
 
         <form method="POST" action="{{ url_for('deposit_funds') }}">
+<input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}"
+>
 
             <label for="amount">Amount (NGN)</label>
             <input
@@ -1435,6 +1440,11 @@ def request_withdrawal():
         </p>
 
         <form method="post">
+        <input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}"
+>
             <label for="amount">Withdrawal Amount (NGN)</label>
             <input
                 type="number"
