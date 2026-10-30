@@ -2862,67 +2862,6 @@ def admin_gift_codes():
         gift_codes=gift_codes,
     )
 
-@app.route(
-    "/admin/referral-code/<int:user_id>/disable",
-    methods=["POST"],
-)
-@admin_required
-def admin_disable_referral_code(user_id):
-    member = db.session.get(User, user_id)
-
-    if member is None:
-        flash("User not found.")
-        return redirect(url_for("admin_dashboard"))
-
-    status = ReferralCodeStatus.query.filter_by(
-        user_id=member.id
-    ).first()
-
-    if status is None:
-        status = ReferralCodeStatus(
-            user_id=member.id,
-            is_active=False,
-        )
-        db.session.add(status)
-    else:
-        status.is_active = False
-
-    db.session.commit()
-
-    flash("Referral code disabled successfully.")
-    return redirect(url_for("admin_dashboard"))
-
-
-@app.route(
-    "/admin/referral-code/<int:user_id>/enable",
-    methods=["POST"],
-)
-@admin_required
-def admin_enable_referral_code(user_id):
-    member = db.session.get(User, user_id)
-
-    if member is None:
-        flash("User not found.")
-        return redirect(url_for("admin_dashboard"))
-
-    status = ReferralCodeStatus.query.filter_by(
-        user_id=member.id
-    ).first()
-
-    if status is None:
-        status = ReferralCodeStatus(
-            user_id=member.id,
-            is_active=True,
-        )
-        db.session.add(status)
-    else:
-        status.is_active = True
-
-    db.session.commit()
-
-    flash("Referral code enabled successfully.")
-    return redirect(url_for("admin_dashboard"))
-
 # ==========================================
 # EDIT USER
 # ==========================================
