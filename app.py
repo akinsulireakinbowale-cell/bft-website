@@ -2830,7 +2830,6 @@ def redeem_gift_code():
 # ==========================================
 
 @app.route("/deposit", methods=["GET", "POST"])
-@login_required
 def deposit_funds():
     user = get_current_user()
 
@@ -2860,8 +2859,16 @@ def deposit_funds():
             flash("Please enter a valid deposit amount.")
             return redirect(url_for("deposit_funds"))
 
-        if not amount.is_finite() or amount <= 0:
-            flash("The deposit amount must be greater than zero.")
+        if not amount.is_finite():
+            flash("Please enter a valid deposit amount.")
+            return redirect(url_for("deposit_funds"))
+
+        if amount < Decimal("3500.00"):
+            flash("Minimum deposit is ₦3,500.")
+            return redirect(url_for("deposit_funds"))
+
+        if amount > Decimal("200000.00"):
+            flash("Maximum deposit is ₦200,000.")
             return redirect(url_for("deposit_funds"))
 
         if amount.as_tuple().exponent < -2:
@@ -2919,6 +2926,14 @@ def deposit_funds():
             6718461313
         </p>
 
+        <p>
+            <strong>Minimum Deposit:</strong> ₦3,500
+        </p>
+
+        <p>
+            <strong>Maximum Deposit:</strong> ₦200,000
+        </p>
+
         <p class="muted">
             After making your transfer, complete the form below
             and provide your payment reference.
@@ -2937,11 +2952,13 @@ def deposit_funds():
             >
 
             <label for="amount">Amount (NGN)</label>
+
             <input
                 type="number"
                 id="amount"
                 name="amount"
-                min="0.01"
+                min="3500"
+                max="200000"
                 step="0.01"
                 required
             >
@@ -2949,6 +2966,7 @@ def deposit_funds():
             <label for="sender_name">
                 Account Name Used for Transfer
             </label>
+
             <input
                 type="text"
                 id="sender_name"
@@ -2960,6 +2978,7 @@ def deposit_funds():
             <label for="payment_reference">
                 Transfer Reference
             </label>
+
             <input
                 type="text"
                 id="payment_reference"
@@ -2979,7 +2998,6 @@ def deposit_funds():
     return page("Deposit Funds", body, user=user)
 
 @app.route("/withdraw", methods=["GET", "POST"])
-@login_required
 def request_withdrawal():
     user = get_current_user()
 
@@ -3013,8 +3031,16 @@ def request_withdrawal():
             flash("Please enter a valid withdrawal amount.")
             return redirect(url_for("request_withdrawal"))
 
-        if not amount.is_finite() or amount <= 0:
-            flash("The withdrawal amount must be greater than zero.")
+        if not amount.is_finite():
+            flash("Please enter a valid withdrawal amount.")
+            return redirect(url_for("request_withdrawal"))
+
+        if amount < Decimal("1300.00"):
+            flash("Minimum withdrawal is ₦1,300.")
+            return redirect(url_for("request_withdrawal"))
+
+        if amount > Decimal("30000.00"):
+            flash("Maximum withdrawal is ₦30,000.")
             return redirect(url_for("request_withdrawal"))
 
         if amount.as_tuple().exponent < -2:
@@ -3071,6 +3097,7 @@ def request_withdrawal():
             "Your withdrawal request has been submitted "
             "and is awaiting administrator review."
         )
+
         return redirect(url_for("my_wallet"))
 
     body = """
@@ -3083,29 +3110,41 @@ def request_withdrawal():
         </p>
 
         <p>
+            <strong>Minimum withdrawal:</strong> ₦1,300
+        </p>
+
+        <p>
+            <strong>Maximum withdrawal:</strong> ₦30,000
+        </p>
+
+        <p>
             Pending withdrawals are deducted from the amount
             available for new requests. Your wallet will only
             be debited when an approved withdrawal is processed.
         </p>
 
         <form method="post">
-        
-        <input
-    type="hidden"
-    name="csrf_token"
-    value="{{ csrf_token() }}"
->
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
             <label for="amount">Withdrawal Amount (NGN)</label>
+
             <input
                 type="number"
                 id="amount"
                 name="amount"
-                min="0.01"
+                min="1300"
+                max="30000"
                 step="0.01"
                 required
             >
 
             <label for="bank_name">Bank Name</label>
+
             <input
                 type="text"
                 id="bank_name"
@@ -3115,6 +3154,7 @@ def request_withdrawal():
             >
 
             <label for="account_name">Account Name</label>
+
             <input
                 type="text"
                 id="account_name"
@@ -3124,6 +3164,7 @@ def request_withdrawal():
             >
 
             <label for="account_number">Account Number</label>
+
             <input
                 type="text"
                 id="account_number"
@@ -3133,7 +3174,9 @@ def request_withdrawal():
                 required
             >
 
-            <button type="submit">Submit Withdrawal Request</button>
+            <button type="submit">
+                Submit Withdrawal Request
+            </button>
         </form>
 
         <p>
@@ -3151,28 +3194,7 @@ def request_withdrawal():
         wallet=wallet,
     )
 
-class BankDetails(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("user.id"),
-        nullable=False,
-        unique=True,
-        index=True,
-    )
-
-    bank_name = db.Column(db.String(120), nullable=False)
-    account_name = db.Column(db.String(120), nullable=False)
-    account_number = db.Column(db.String(30), nullable=False)
-
-    updated_at = db.Column(
-        db.DateTime,
-        nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-    )
-
+    
 # ==========================================
 # DEPOSIT REQUEST MODEL
 # ==========================================
