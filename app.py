@@ -894,27 +894,30 @@ def home():
                 margin: 0;
             }
 
+            /* IMAGE SLIDER */
             .bft-slider {
                 position: relative;
                 overflow: hidden;
                 border-radius: 16px;
                 margin-bottom: 20px;
                 background: #eee;
+                padding: 10px;
             }
 
             .bft-slide {
-    display: none;
-    width: 100%;
-    height: 130px;
-    max-width: 280px;
-    object-fit: contain;
-    margin: 0 auto;
-}
+                display: none;
+                width: 100%;
+                height: 130px;
+                max-width: 280px;
+                object-fit: contain;
+                margin: 0 auto;
+            }
 
             .bft-slide.active {
                 display: block;
             }
 
+            /* HOMEPAGE SHORTCUTS */
             .bft-shortcuts {
                 display: grid;
                 grid-template-columns: repeat(3, 1fr);
@@ -940,6 +943,14 @@ def home():
                 margin-bottom: 7px;
             }
 
+            .bft-shortcut small {
+                display: block;
+                font-size: 10px;
+                font-weight: normal;
+                margin-top: 5px;
+            }
+
+            /* HOMEPAGE SECTIONS */
             .bft-section {
                 background: white;
                 padding: 20px;
@@ -961,6 +972,7 @@ def home():
                 border-radius: 9px;
                 text-decoration: none;
                 font-weight: bold;
+                margin: 4px;
             }
 
             .bft-updates {
@@ -970,158 +982,248 @@ def home():
                 border-radius: 8px;
             }
 
+            /* BFT NOTICE POPUP */
+            .bft-notice-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.65);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 99999;
+                padding: 15px;
+            }
+
+            .bft-notice-card {
+                position: relative;
+                width: 100%;
+                max-width: 340px;
+                max-height: 90vh;
+                overflow-y: auto;
+                background: #fff;
+                border-radius: 22px;
+                box-shadow: 0 10px 35px rgba(0,0,0,.3);
+            }
+
+            .bft-notice-header {
+                background: linear-gradient(135deg, #f44336, #ff8c00);
+                color: white;
+                text-align: center;
+                padding: 25px 15px;
+                border-radius: 0 0 50% 15%;
+            }
+
+            .bft-notice-header h2 {
+                margin: 5px 0;
+            }
+
+            .bft-notice-header p {
+                margin-bottom: 5px;
+            }
+
+            .bft-notice-content {
+                padding: 15px;
+            }
+
+            .bft-notice-item {
+                background: #f7f7f7;
+                padding: 13px;
+                margin-bottom: 9px;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+
+            .bft-notice-buttons {
+                display: flex;
+                gap: 8px;
+                padding: 0 12px 15px;
+            }
+
+            .bft-notice-buttons a {
+                flex: 1;
+                text-align: center;
+                padding: 12px 5px;
+                border-radius: 25px;
+                color: white;
+                text-decoration: none;
+                font-size: 12px;
+                font-weight: bold;
+            }
+
+            .bft-customer-service {
+                background: #159bd0;
+            }
+
+            .bft-telegram-group {
+                background: linear-gradient(135deg, #f44336, #ff8c00);
+            }
+
+            .bft-notice-close {
+                display: block;
+                margin: 0 auto 15px;
+                background: #222;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 38px;
+                height: 38px;
+                font-size: 23px;
+                cursor: pointer;
+            }
+
             @media(max-width: 400px) {
                 .bft-slide {
-                    height: 150px;
+                    height: 130px;
+                }
+
+                .bft-shortcuts {
+                    gap: 8px;
+                }
+
+                .bft-shortcut {
+                    padding: 14px 5px;
+                    font-size: 12px;
                 }
             }
-            .bft-notice-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.65);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    padding: 15px;
-}
-
-.bft-notice-card {
-    width: 100%;
-    max-width: 340px;
-    background: #fff;
-    border-radius: 22px;
-    overflow: hidden;
-    box-shadow: 0 10px 35px rgba(0,0,0,.3);
-}
-
-.bft-notice-header {
-    background: linear-gradient(135deg, #f44336, #ff8c00);
-    color: white;
-    text-align: center;
-    padding: 25px 15px;
-    border-radius: 0 0 50% 15%;
-}
-
-.bft-notice-header h2 {
-    margin: 5px 0;
-}
-
-.bft-notice-content {
-    padding: 15px;
-}
-
-.bft-notice-item {
-    background: #f7f7f7;
-    padding: 13px;
-    margin-bottom: 9px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-.bft-notice-buttons {
-    display: flex;
-    gap: 8px;
-    padding: 0 12px 15px;
-}
-
-.bft-notice-buttons a {
-    flex: 1;
-    text-align: center;
-    padding: 12px 5px;
-    border-radius: 25px;
-    color: white;
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.bft-customer-service {
-    background: #159bd0;
-}
-
-.bft-telegram-group {
-    background: linear-gradient(135deg, #f44336, #ff8c00);
-}
-
-.bft-notice-close {
-    display: block;
-    margin: 12px auto;
-    background: #222;
-    color: white;
-    border: 2px solid white;
-    border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    font-size: 20px;
-    cursor: pointer;
-}
         </style>
 
         <div class="bft-home">
 
+            <!-- BFT WELCOME NOTICE POPUP -->
+            <div class="bft-notice-overlay" id="bftNotice">
+                <div class="bft-notice-card">
+
+                    <div class="bft-notice-header">
+                        <h2>📢 BFT NOTICE</h2>
+                        <p>Welcome to BFT!</p>
+                    </div>
+
+                    <div class="bft-notice-content">
+
+                        <div class="bft-notice-item">
+                            💰 MINIMUM DEPOSIT<br>
+                            ₦3,500
+                        </div>
+
+                        <div class="bft-notice-item">
+                            📤 MINIMUM WITHDRAWAL<br>
+                            ₦1,300
+                        </div>
+
+                        <div class="bft-notice-item">
+                            🎁 GIFT CODE<br>
+                            Available
+                        </div>
+
+                        <div class="bft-notice-item">
+                            👥 REFERRAL REWARDS<br>
+                            Available
+                        </div>
+
+                    </div>
+
+                    <div class="bft-notice-buttons">
+
+                        <a class="bft-customer-service"
+                           href="https://t.me/BFT_JAMES"
+                           target="_blank"
+                           rel="noopener">
+                            ✈ Customer Service
+                        </a>
+
+                        <a class="bft-telegram-group"
+                           href="javascript:void(0)">
+                            ✈ Telegram Group<br>
+                            Coming Soon
+                        </a>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="bft-notice-close"
+                        aria-label="Close notice"
+                        onclick="document.getElementById('bftNotice').style.display='none'">
+                        ×
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- MAIN WELCOME SECTION -->
             <section class="bft-hero">
                 <h1>WELCOME TO BFT</h1>
                 <p>Building a Better Digital Experience</p>
             </section>
 
+            <!-- IMAGE SLIDER -->
+            <div class="bft-slider">
+
+                <img class="bft-slide active"
+                     src="{{ url_for('static', filename='images.jpeg') }}"
+                     alt="BFT Control Unit">
+
+                <img class="bft-slide"
+                     src="{{ url_for('static', filename='OIP (2).webp') }}"
+                     alt="BFT Remote Controls">
+
+                <img class="bft-slide"
+                     src="{{ url_for('static', filename='bft-logo__445x388.webp') }}"
+                     alt="BFT Logo">
+
             </div>
 
-<div class="bft-slider">
-
-    <img class="bft-slide active"
-         src="{{ url_for('static', filename='images.jpeg') }}"
-         alt="BFT Control Unit">
-
-    <img class="bft-slide"
-         src="{{ url_for('static', filename='OIP (2).webp') }}"
-         alt="BFT Remote Controls">
-
-    <img class="bft-slide"
-         src="{{ url_for('static', filename='bft-logo__445x388.webp') }}"
-         alt="BFT Logo">
-
-</div>
-
+            <!-- HOMEPAGE SHORTCUTS -->
             <div class="bft-shortcuts">
 
                 <a class="bft-shortcut"
                    href="{{ url_for('team') }}">
-                    <span>👥</span>My Team
+                    <span>👥</span>
+                    My Team
                 </a>
 
                 <a class="bft-shortcut"
                    href="{{ url_for('deposit_funds') }}">
-                    <span>📥</span>Recharge
+                    <span>📥</span>
+                    Recharge
                 </a>
 
                 <div class="bft-shortcut">
-    <span>📤</span>Withdraw
-    <small>Available from My Account</small>
-</div>
+                    <span>📤</span>
+                    Withdraw
+                    <small>Available from My Account</small>
+                </div>
 
                 <a class="bft-shortcut"
                    href="{{ url_for('team') }}">
-                    <span>🔗</span>Invite
+                    <span>🔗</span>
+                    Invite
                 </a>
 
                 <a class="bft-shortcut"
                    href="{{ url_for('dashboard') }}">
-                    <span>📱</span>My Account
+                    <span>📱</span>
+                    My Account
                 </a>
 
-                <a class="bft-shortcut" href="https://t.me/BFT_JAMES" target="_blank" rel="noopener">
-    <span>🎧</span>Online Service
-</a>
+                <a class="bft-shortcut"
+                   href="https://t.me/BFT_JAMES"
+                   target="_blank"
+                   rel="noopener">
+                    <span>🎧</span>
+                    Online Service
+                </a>
 
             </div>
 
+            <!-- BFT UPDATES -->
             <section class="bft-section">
                 <h2>📢 BFT Updates</h2>
 
                 <div class="bft-updates">
                     <strong>Stay Connected!</strong>
+
                     <p>
                         Welcome to BFT. Check this section regularly
                         for important announcements, platform news
@@ -1130,6 +1232,7 @@ def home():
                 </div>
             </section>
 
+            <!-- COMPANY OVERVIEW -->
             <section class="bft-section">
                 <h2>🏢 Company Overview</h2>
 
@@ -1145,6 +1248,7 @@ def home():
                 </a>
             </section>
 
+            <!-- ACCOUNT SECTION -->
             <section class="bft-section">
                 <h2>Welcome to BFT</h2>
 
@@ -1154,6 +1258,7 @@ def home():
                 </p>
 
                 {% if not current_user %}
+
                     <a class="bft-overview-button"
                        href="{{ url_for('register') }}">
                         Create Account
@@ -1163,31 +1268,42 @@ def home():
                        href="{{ url_for('login') }}">
                         Log In
                     </a>
+
                 {% else %}
+
                     <a class="bft-overview-button"
                        href="{{ url_for('market') }}">
                         Explore Market
                     </a>
+
                 {% endif %}
             </section>
 
         </div>
 
+        <!-- IMAGE SLIDER SCRIPT -->
         <script>
-            let bftSlideIndex = 0;
-            const bftSlides = document.querySelectorAll(".bft-slide");
+            (function() {
+                const bftSlides =
+                    document.querySelectorAll(".bft-slide");
 
-            setInterval(function() {
-                bftSlides[bftSlideIndex].classList.remove("active");
+                if (bftSlides.length > 1) {
+                    let bftSlideIndex = 0;
 
-                bftSlideIndex =
-                    (bftSlideIndex + 1) % bftSlides.length;
+                    setInterval(function() {
+                        bftSlides[bftSlideIndex].classList.remove("active");
 
-                bftSlides[bftSlideIndex].classList.add("active");
-            }, 3500);
+                        bftSlideIndex =
+                            (bftSlideIndex + 1) % bftSlides.length;
+
+                        bftSlides[bftSlideIndex].classList.add("active");
+                    }, 3500);
+                }
+            })();
         </script>
         """,
     )
+
 
     
 @app.route("/company-overview")
@@ -1236,6 +1352,17 @@ def company_overview():
             padding: 14px;
             border-radius: 8px;
         }
+
+        .company-back-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #b71c1c, #ef6c00);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 9px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
     </style>
 
     <div class="company-profile">
@@ -1282,20 +1409,30 @@ def company_overview():
         <section class="company-card">
             <h2>Our Core Values</h2>
             <ul>
-                <li><strong>Transparency:</strong>
-                Communicating clearly and honestly.</li>
+                <li>
+                    <strong>Transparency:</strong>
+                    Communicating clearly and honestly.
+                </li>
 
-                <li><strong>Trust:</strong>
-                Building confidence through responsible operations.</li>
+                <li>
+                    <strong>Trust:</strong>
+                    Building confidence through responsible operations.
+                </li>
 
-                <li><strong>Innovation:</strong>
-                Improving our platform and services.</li>
+                <li>
+                    <strong>Innovation:</strong>
+                    Improving our platform and services.
+                </li>
 
-                <li><strong>Accountability:</strong>
-                Taking responsibility for our operations.</li>
+                <li>
+                    <strong>Accountability:</strong>
+                    Taking responsibility for our operations.
+                </li>
 
-                <li><strong>User Experience:</strong>
-                Making our platform simple and convenient.</li>
+                <li>
+                    <strong>User Experience:</strong>
+                    Making our platform simple and convenient.
+                </li>
             </ul>
         </section>
 
@@ -1328,8 +1465,10 @@ def company_overview():
 
         <section class="company-card">
             <h2>Business Registration</h2>
+
             <div class="company-status">
                 <strong>Registration Status: Not Yet Registered</strong>
+
                 <p>
                     BFT is currently an independent project and
                     has not yet been registered with the
@@ -1345,45 +1484,22 @@ def company_overview():
                 communicate responsibly and create a better
                 digital experience for every user.
             </p>
+
             <h3 style="color:#b71c1c;">
                 BFT — Transparency, Innovation and Better
                 Digital Experiences.
             </h3>
         </section>
 
-        <a class="button" href="{{ url_for('home') }}">
+        <a class="company-back-button" href="{{ url_for('home') }}">
             Back to Home
         </a>
-
-
-            </div>
-
-            <div class="bft-notice-buttons">
-                <a class="bft-customer-service"
-                   href="https://t.me/BFT_JAMES"
-                   target="_blank" rel="noopener">
-                    ✈ Customer Service
-                </a>
-
-                <a class="bft-telegram-group"
-                   href="javascript:void(0)"
-                   style="opacity:0.7;">
-                    ✈ Telegram Group<br>Coming Soon
-                </a>
-            </div>
-        </div>
-
-        <button class="bft-notice-close"
-                onclick="document.getElementById('bftNotice').style.display='none'">
-            ×
-        </button>
-    </div>
-</div>
 
     </div>
     """
 
     return page("Company Overview", body)
+            
 
 
 # ==========================================
