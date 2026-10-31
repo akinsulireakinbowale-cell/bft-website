@@ -902,12 +902,17 @@ def home():
                 background: #eee;
             }
 
-            .bft-slide {
-                display: none;
-                width: 100%;
-                height: 190px;
-                object-fit: cover;
-            }
+            <img class="bft-slide active"
+     src="{{ url_for('static', filename='bft-control.jpg') }}"
+     alt="BFT Control Unit">
+
+<img class="bft-slide"
+     src="{{ url_for('static', filename='bft-remotes.webp') }}"
+     alt="BFT Remote Controls">
+
+<img class="bft-slide"
+     src="{{ url_for('static', filename='bft-logo.webp') }}"
+     alt="BFT Logo">
 
             .bft-slide.active {
                 display: block;
