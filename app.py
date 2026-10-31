@@ -905,13 +905,10 @@ def home():
             .bft-slide {
     display: none;
     width: 100%;
-    height: 190px;
+    height: 130px;
+    max-width: 280px;
     object-fit: contain;
-    margin: auto;
-}
-
-.bft-slide.active {
-    display: block;
+    margin: 0 auto;
 }
 
             .bft-slide.active {
@@ -1069,18 +1066,6 @@ def home():
                 <p>Building a Better Digital Experience</p>
             </section>
 
-            <div class="bft-slider">
-                <img class="bft-slide active"
-                     src="https://placehold.co/850x350/b71c1c/ffffff?text=Welcome+to+BFT"
-                     alt="Welcome to BFT">
-
-                <img class="bft-slide"
-                     src="https://placehold.co/850x350/ef6c00/ffffff?text=Innovation+and+Growth"
-                     alt="Innovation and Growth">
-
-                <img class="bft-slide"
-                     src="https://placehold.co/850x350/333333/ffffff?text=Your+BFT+Experience"
-                     alt="Your BFT Experience">
             </div>
 
 <div class="bft-slider">
