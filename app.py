@@ -2998,7 +2998,7 @@ def deposit_funds():
 
     return page("Deposit Funds", body, user=user)
 
-url_for("request_withdrawal"))
+    return redirect(url_for("request_withdrawal"))
 
         withdrawal = WithdrawalRequest(
             user_id=user.id,
