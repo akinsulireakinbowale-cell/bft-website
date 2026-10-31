@@ -1023,10 +1023,9 @@ def home():
                     <span>📱</span>My Account
                 </a>
 
-                <a class="bft-shortcut"
-                   href="mailto:support@bft.com">
-                    <span>🎧</span>Online Service
-                </a>
+                <a class="bft-shortcut" href="https://t.me/BFT_JAMES" target="_blank" rel="noopener">
+    <span>🎧</span>Online Service
+</a>
 
             </div>
 
