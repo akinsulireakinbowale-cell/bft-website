@@ -2998,7 +2998,28 @@ def deposit_funds():
 
     return page("Deposit Funds", body, user=user)
 
-@app.route("/withdraw", methods=["GET", "POST"])
+url_for("request_withdrawal"))
+
+        withdrawal = WithdrawalRequest(
+            user_id=user.id,
+            amount=amount,
+            bank_name=bank_name,
+            account_name=account_name,
+            account_number=account_number,
+            status="pending",
+        )
+
+        db.session.add(withdrawal)
+        db.session.commit()
+
+        flash(
+            "Your withdrawal request has been submitted "
+            "and is awaiting administrator review."
+        )
+
+        return redirect(url_for("my_wallet"))
+
+    @app.route("/withdraw", methods=["GET", "POST"])
 def request_withdrawal():
     user = get_current_user()
 
@@ -3012,9 +3033,21 @@ def request_withdrawal():
         return redirect(url_for("my_wallet"))
 
     if request.method == "POST":
-                nigeria_time = datetime.now(ZoneInfo("Africa/Lagos")).time()
+        nigeria_time = datetime.now(
+            ZoneInfo("Africa/Lagos")
+        )
 
-        
+        current_minutes = (
+            nigeria_time.hour * 60 + nigeria_time.minute
+        )
+
+        if current_minutes < 540 or current_minutes >= 1020:
+            flash(
+                "Withdrawals are available daily from "
+                "9:00 AM to 5:00 PM Nigerian time."
+            )
+            return redirect(url_for("request_withdrawal"))
+
         amount_text = request.form.get("amount", "").strip()
         bank_name = request.form.get("bank_name", "").strip()
         account_name = request.form.get("account_name", "").strip()
@@ -3108,18 +3141,14 @@ def request_withdrawal():
     <section class="card">
         <h1>Request Withdrawal</h1>
 
-        <p>
-            <strong>Wallet balance:</strong>
-            NGN {{ "%.2f"|format(wallet.balance) }}
-        </p>
+        <p><strong>Wallet balance:</strong>
+        NGN {{ "%.2f"|format(wallet.balance) }}</p>
 
-        <p>
-            <strong>Minimum withdrawal:</strong> ₦1,300
-        </p>
+        <p><strong>Minimum withdrawal:</strong> ₦1,300</p>
+        <p><strong>Maximum withdrawal:</strong> ₦30,000</p>
 
-        <p>
-            <strong>Maximum withdrawal:</strong> ₦30,000
-        </p>
+        <p><strong>Withdrawal hours:</strong>
+        Daily, 9:00 AM – 5:00 PM Nigerian time.</p>
 
         <p>
             Pending withdrawals are deducted from the amount
@@ -3128,59 +3157,27 @@ def request_withdrawal():
         </p>
 
         <form method="post">
-
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token() }}"
-            >
+            <input type="hidden" name="csrf_token"
+                   value="{{ csrf_token() }}">
 
             <label for="amount">Withdrawal Amount (NGN)</label>
-
-            <input
-                type="number"
-                id="amount"
-                name="amount"
-                min="1300"
-                max="30000"
-                step="0.01"
-                required
-            >
+            <input type="number" id="amount" name="amount"
+                   min="1300" max="30000" step="0.01" required>
 
             <label for="bank_name">Bank Name</label>
-
-            <input
-                type="text"
-                id="bank_name"
-                name="bank_name"
-                maxlength="120"
-                required
-            >
+            <input type="text" id="bank_name" name="bank_name"
+                   maxlength="120" required>
 
             <label for="account_name">Account Name</label>
-
-            <input
-                type="text"
-                id="account_name"
-                name="account_name"
-                maxlength="120"
-                required
-            >
+            <input type="text" id="account_name" name="account_name"
+                   maxlength="120" required>
 
             <label for="account_number">Account Number</label>
+            <input type="text" id="account_number"
+                   name="account_number" inputmode="numeric"
+                   maxlength="30" required>
 
-            <input
-                type="text"
-                id="account_number"
-                name="account_number"
-                inputmode="numeric"
-                maxlength="30"
-                required
-            >
-
-            <button type="submit">
-                Submit Withdrawal Request
-            </button>
+            <button type="submit">Submit Withdrawal Request</button>
         </form>
 
         <p>
@@ -3196,7 +3193,8 @@ def request_withdrawal():
         body,
         user=user,
         wallet=wallet,
-    )
+        )
+
     
 # ==========================================
 # DEPOSIT REQUEST MODEL
