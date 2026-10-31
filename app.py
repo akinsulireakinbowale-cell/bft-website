@@ -3014,9 +3014,6 @@ def request_withdrawal():
     if request.method == "POST":
                 nigeria_time = datetime.now(ZoneInfo("Africa/Lagos")).time()
 
-        opening_time = datetime.strptime("09:00", "%H:%M").time()
-        closing_time = datetime.strptime("17:00", "%H:%M").time()
-
         if not (opening_time <= nigeria_time < closing_time):
             flash(
                 "Withdrawals are available daily from "
