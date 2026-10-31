@@ -1083,6 +1083,22 @@ def home():
                      alt="Your BFT Experience">
             </div>
 
+<div class="bft-slider">
+
+    <img class="bft-slide active"
+         src="{{ url_for('static', filename='images.jpeg') }}"
+         alt="BFT Control Unit">
+
+    <img class="bft-slide"
+         src="{{ url_for('static', filename='OIP (2).webp') }}"
+         alt="BFT Remote Controls">
+
+    <img class="bft-slide"
+         src="{{ url_for('static', filename='bft-logo__445x388.webp') }}"
+         alt="BFT Logo">
+
+</div>
+
             <div class="bft-shortcuts">
 
                 <a class="bft-shortcut"
@@ -1187,21 +1203,7 @@ def home():
         </script>
         """,
     )
-<div class="bft-slider">
 
-    <img class="bft-slide active"
-         src="{{ url_for('static', filename='images.jpeg') }}"
-         alt="BFT Control Unit">
-
-    <img class="bft-slide"
-         src="{{ url_for('static', filename='OIP (2).webp') }}"
-         alt="BFT Remote Controls">
-
-    <img class="bft-slide"
-         src="{{ url_for('static', filename='bft-logo__445x388.webp') }}"
-         alt="BFT Logo">
-
-</div>
     
 @app.route("/company-overview")
 def company_overview():
