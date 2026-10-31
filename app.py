@@ -870,90 +870,6 @@ def home():
     return page(
         "Home",
         """
-
-.bft-notice-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.65);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    padding: 15px;
-}
-
-.bft-notice-card {
-    width: 100%;
-    max-width: 340px;
-    background: #fff;
-    border-radius: 22px;
-    overflow: hidden;
-    box-shadow: 0 10px 35px rgba(0,0,0,.3);
-}
-
-.bft-notice-header {
-    background: linear-gradient(135deg, #f44336, #ff8c00);
-    color: white;
-    text-align: center;
-    padding: 25px 15px;
-    border-radius: 0 0 50% 15%;
-}
-
-.bft-notice-header h2 {
-    margin: 5px 0;
-}
-
-.bft-notice-content {
-    padding: 15px;
-}
-
-.bft-notice-item {
-    background: #f7f7f7;
-    padding: 13px;
-    margin-bottom: 9px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-.bft-notice-buttons {
-    display: flex;
-    gap: 8px;
-    padding: 0 12px 15px;
-}
-
-.bft-notice-buttons a {
-    flex: 1;
-    text-align: center;
-    padding: 12px 5px;
-    border-radius: 25px;
-    color: white;
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.bft-customer-service {
-    background: #159bd0;
-}
-
-.bft-telegram-group {
-    background: linear-gradient(135deg, #f44336, #ff8c00);
-}
-
-.bft-notice-close {
-    display: block;
-    margin: 12px auto;
-    background: #222;
-    color: white;
-    border: 2px solid white;
-    border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    font-size: 20px;
-    cursor: pointer;
-}
-
         <style>
             .bft-home {
                 max-width: 850px;
@@ -1057,6 +973,88 @@ def home():
                     height: 150px;
                 }
             }
+            .bft-notice-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 15px;
+}
+
+.bft-notice-card {
+    width: 100%;
+    max-width: 340px;
+    background: #fff;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 10px 35px rgba(0,0,0,.3);
+}
+
+.bft-notice-header {
+    background: linear-gradient(135deg, #f44336, #ff8c00);
+    color: white;
+    text-align: center;
+    padding: 25px 15px;
+    border-radius: 0 0 50% 15%;
+}
+
+.bft-notice-header h2 {
+    margin: 5px 0;
+}
+
+.bft-notice-content {
+    padding: 15px;
+}
+
+.bft-notice-item {
+    background: #f7f7f7;
+    padding: 13px;
+    margin-bottom: 9px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.bft-notice-buttons {
+    display: flex;
+    gap: 8px;
+    padding: 0 12px 15px;
+}
+
+.bft-notice-buttons a {
+    flex: 1;
+    text-align: center;
+    padding: 12px 5px;
+    border-radius: 25px;
+    color: white;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.bft-customer-service {
+    background: #159bd0;
+}
+
+.bft-telegram-group {
+    background: linear-gradient(135deg, #f44336, #ff8c00);
+}
+
+.bft-notice-close {
+    display: block;
+    margin: 12px auto;
+    background: #222;
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    font-size: 20px;
+    cursor: pointer;
+}
         </style>
 
         <div class="bft-home">
