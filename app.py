@@ -1355,30 +1355,7 @@ def company_overview():
             Back to Home
         </a>
 
-<div class="bft-notice-overlay" id="bftNotice">
-    <div>
-        <div class="bft-notice-card">
-            <div class="bft-notice-header">
-                <h2>📢 Notice</h2>
-                <p>Welcome to BFT! Stay connected.</p>
-            </div>
 
-            <div class="bft-notice-content">
-                <div class="bft-notice-item">
-                    💰 MINIMUM DEPOSIT<br>₦3,500
-                </div>
-
-                <div class="bft-notice-item">
-                    📤 MINIMUM WITHDRAWAL<br>₦1,300
-                </div>
-
-                <div class="bft-notice-item">
-                    🎁 GIFT CODE<br>Available
-                </div>
-
-                <div class="bft-notice-item">
-                    👥 REFERRAL REWARDS<br>Available
-                </div>
             </div>
 
             <div class="bft-notice-buttons">
