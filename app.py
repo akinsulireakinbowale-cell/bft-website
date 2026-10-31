@@ -3194,6 +3194,18 @@ def request_withdrawal():
         wallet=wallet,
     )
 
+        nigeria_time = datetime.now(ZoneInfo("Africa/Lagos")).time()
+
+        opening_time = datetime.strptime("09:00", "%H:%M").time()
+        closing_time = datetime.strptime("17:00", "%H:%M").time()
+
+        if not (opening_time <= nigeria_time < closing_time):
+            flash(
+                "Withdrawals are available daily from "
+                "9:00 AM to 5:00 PM Nigerian time."
+            )
+            return redirect(url_for("request_withdrawal"))
+
     
 # ==========================================
 # DEPOSIT REQUEST MODEL
