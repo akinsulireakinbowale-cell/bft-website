@@ -3014,12 +3014,7 @@ def request_withdrawal():
     if request.method == "POST":
                 nigeria_time = datetime.now(ZoneInfo("Africa/Lagos")).time()
 
-        if not (opening_time <= nigeria_time < closing_time):
-            flash(
-                "Withdrawals are available daily from "
-                "9:00 AM to 5:00 PM Nigerian time."
-            )
-            return redirect(url_for("request_withdrawal"))
+        
         amount_text = request.form.get("amount", "").strip()
         bank_name = request.form.get("bank_name", "").strip()
         account_name = request.form.get("account_name", "").strip()
