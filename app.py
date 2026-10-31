@@ -1004,7 +1004,7 @@ def home():
                 </a>
 
                 <a class="bft-shortcut"
-                   href="{{ url_for('deposit') }}">
+                   href="{{ url_for('deposit_funds') }}">
                     <span>📥</span>Recharge
                 </a>
 
