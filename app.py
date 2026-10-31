@@ -3011,6 +3011,17 @@ def request_withdrawal():
         return redirect(url_for("my_wallet"))
 
     if request.method == "POST":
+                nigeria_time = datetime.now(ZoneInfo("Africa/Lagos")).time()
+
+        opening_time = datetime.strptime("09:00", "%H:%M").time()
+        closing_time = datetime.strptime("17:00", "%H:%M").time()
+
+        if not (opening_time <= nigeria_time < closing_time):
+            flash(
+                "Withdrawals are available daily from "
+                "9:00 AM to 5:00 PM Nigerian time."
+            )
+            return redirect(url_for("request_withdrawal"))
         amount_text = request.form.get("amount", "").strip()
         bank_name = request.form.get("bank_name", "").strip()
         account_name = request.form.get("account_name", "").strip()
@@ -3193,29 +3204,6 @@ def request_withdrawal():
         user=user,
         wallet=wallet,
     )
-
-        @app.route("/withdraw", methods=["GET", "POST"])
-def request_withdrawal():
-    user = get_current_user()
-
-    if not user:
-        return redirect(url_for("login"))
-
-    if request.method == "POST":
-        nigeria_time = datetime.now(ZoneInfo("Africa/Lagos")).time()
-
-        opening_time = datetime.strptime("09:00", "%H:%M").time()
-        closing_time = datetime.strptime("17:00", "%H:%M").time()
-
-        if not (opening_time <= nigeria_time < closing_time):
-            flash(
-                "Withdrawals are available daily from "
-                "9:00 AM to 5:00 PM Nigerian time."
-            )
-            return redirect(url_for("request_withdrawal"))
-
-        # Keep your existing withdrawal validation and processing here.
-
     
 # ==========================================
 # DEPOSIT REQUEST MODEL
