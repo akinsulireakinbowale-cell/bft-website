@@ -8,8 +8,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 from datetime import timedelta, timezone
-from zoneinfo import ZoneInfo
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInf
 from flask_login import login_required
 from decimal import Decimal
 
@@ -3033,13 +3032,10 @@ def request_withdrawal():
         return redirect(url_for("my_wallet"))
 
     if request.method == "POST":
-        nigeria_time = datetime.now(
-            ZoneInfo("Africa/Lagos")
-        )
 
-        current_minutes = (
-            nigeria_time.hour * 60 + nigeria_time.minute
-        )
+        # Nigeria withdrawal operating hours
+        nigeria_time = datetime.now(ZoneInfo("Africa/Lagos"))
+        current_minutes = nigeria_time.hour * 60 + nigeria_time.minute
 
         if current_minutes < 540 or current_minutes >= 1020:
             flash(
@@ -3048,6 +3044,7 @@ def request_withdrawal():
             )
             return redirect(url_for("request_withdrawal"))
 
+        # Collect form details
         amount_text = request.form.get("amount", "").strip()
         bank_name = request.form.get("bank_name", "").strip()
         account_name = request.form.get("account_name", "").strip()
@@ -3062,6 +3059,7 @@ def request_withdrawal():
             flash("Please complete all withdrawal fields.")
             return redirect(url_for("request_withdrawal"))
 
+        # Validate amount
         try:
             amount = Decimal(amount_text)
         except InvalidOperation:
@@ -3084,6 +3082,7 @@ def request_withdrawal():
             flash("Use no more than two decimal places.")
             return redirect(url_for("request_withdrawal"))
 
+        # Validate bank details
         if len(bank_name) > 120 or len(account_name) > 120:
             flash("One of the bank details is too long.")
             return redirect(url_for("request_withdrawal"))
@@ -3096,6 +3095,7 @@ def request_withdrawal():
             flash("The account number must contain digits only.")
             return redirect(url_for("request_withdrawal"))
 
+        # Calculate available balance
         pending_total = db.session.query(
             db.func.coalesce(
                 db.func.sum(WithdrawalRequest.amount),
@@ -3118,6 +3118,7 @@ def request_withdrawal():
             )
             return redirect(url_for("request_withdrawal"))
 
+        # Create withdrawal request
         withdrawal = WithdrawalRequest(
             user_id=user.id,
             amount=amount,
@@ -3137,18 +3138,23 @@ def request_withdrawal():
 
         return redirect(url_for("my_wallet"))
 
+    # Withdrawal page
     body = """
     <section class="card">
         <h1>Request Withdrawal</h1>
 
-        <p><strong>Wallet balance:</strong>
-        NGN {{ "%.2f"|format(wallet.balance) }}</p>
+        <p>
+            <strong>Wallet balance:</strong>
+            NGN {{ "%.2f"|format(wallet.balance) }}
+        </p>
 
         <p><strong>Minimum withdrawal:</strong> ₦1,300</p>
         <p><strong>Maximum withdrawal:</strong> ₦30,000</p>
 
-        <p><strong>Withdrawal hours:</strong>
-        Daily, 9:00 AM – 5:00 PM Nigerian time.</p>
+        <p>
+            <strong>Withdrawal hours:</strong>
+            Daily, 9:00 AM – 5:00 PM Nigerian time.
+        </p>
 
         <p>
             Pending withdrawals are deducted from the amount
@@ -3157,6 +3163,7 @@ def request_withdrawal():
         </p>
 
         <form method="post">
+
             <input type="hidden" name="csrf_token"
                    value="{{ csrf_token() }}">
 
@@ -3174,10 +3181,15 @@ def request_withdrawal():
 
             <label for="account_number">Account Number</label>
             <input type="text" id="account_number"
-                   name="account_number" inputmode="numeric"
-                   maxlength="30" required>
+                   name="account_number"
+                   inputmode="numeric"
+                   maxlength="30"
+                   required>
 
-            <button type="submit">Submit Withdrawal Request</button>
+            <button type="submit">
+                Submit Withdrawal Request
+            </button>
+
         </form>
 
         <p>
@@ -3193,8 +3205,7 @@ def request_withdrawal():
         body,
         user=user,
         wallet=wallet,
-        )
-
+)
     
 # ==========================================
 # DEPOSIT REQUEST MODEL
