@@ -870,30 +870,407 @@ def home():
     return page(
         "Home",
         """
-        <section class="card">
-            <h1>Welcome to BFT</h1>
+        <style>
+            .bft-home {
+                max-width: 850px;
+                margin: auto;
+            }
 
-            <p>Welcome to your BFT home page.</p>
+            .bft-hero {
+                background: linear-gradient(135deg, #b71c1c, #ef6c00);
+                color: white;
+                padding: 25px 18px;
+                border-radius: 18px;
+                text-align: center;
+                margin-bottom: 18px;
+            }
 
-            <p>Explore the Market, check your Team,
-            and manage your account.</p>
+            .bft-hero h1 {
+                margin: 0 0 8px;
+                font-size: 29px;
+            }
 
-            {% if not current_user %}
-                <a class="button" href="{{ url_for('register') }}">
-                    Create Account
+            .bft-hero p {
+                margin: 0;
+            }
+
+            .bft-slider {
+                position: relative;
+                overflow: hidden;
+                border-radius: 16px;
+                margin-bottom: 20px;
+                background: #eee;
+            }
+
+            .bft-slide {
+                display: none;
+                width: 100%;
+                height: 190px;
+                object-fit: cover;
+            }
+
+            .bft-slide.active {
+                display: block;
+            }
+
+            .bft-shortcuts {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+
+            .bft-shortcut {
+                background: white;
+                border-radius: 14px;
+                padding: 17px 8px;
+                text-align: center;
+                text-decoration: none;
+                color: #333;
+                box-shadow: 0 3px 12px rgba(0,0,0,.07);
+                font-weight: bold;
+                font-size: 13px;
+            }
+
+            .bft-shortcut span {
+                display: block;
+                font-size: 25px;
+                margin-bottom: 7px;
+            }
+
+            .bft-section {
+                background: white;
+                padding: 20px;
+                border-radius: 16px;
+                margin-bottom: 18px;
+                box-shadow: 0 3px 12px rgba(0,0,0,.06);
+            }
+
+            .bft-section h2 {
+                color: #b71c1c;
+                margin-top: 0;
+            }
+
+            .bft-overview-button {
+                display: inline-block;
+                background: linear-gradient(135deg, #b71c1c, #ef6c00);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 9px;
+                text-decoration: none;
+                font-weight: bold;
+            }
+
+            .bft-updates {
+                border-left: 4px solid #ef6c00;
+                padding: 10px 14px;
+                background: #fff7f0;
+                border-radius: 8px;
+            }
+
+            @media(max-width: 400px) {
+                .bft-slide {
+                    height: 150px;
+                }
+            }
+        </style>
+
+        <div class="bft-home">
+
+            <section class="bft-hero">
+                <h1>WELCOME TO BFT</h1>
+                <p>Building a Better Digital Experience</p>
+            </section>
+
+            <div class="bft-slider">
+                <img class="bft-slide active"
+                     src="https://placehold.co/850x350/b71c1c/ffffff?text=Welcome+to+BFT"
+                     alt="Welcome to BFT">
+
+                <img class="bft-slide"
+                     src="https://placehold.co/850x350/ef6c00/ffffff?text=Innovation+and+Growth"
+                     alt="Innovation and Growth">
+
+                <img class="bft-slide"
+                     src="https://placehold.co/850x350/333333/ffffff?text=Your+BFT+Experience"
+                     alt="Your BFT Experience">
+            </div>
+
+            <div class="bft-shortcuts">
+
+                <a class="bft-shortcut"
+                   href="{{ url_for('team') }}">
+                    <span>👥</span>My Team
                 </a>
 
-                <a class="button" href="{{ url_for('login') }}">
-                    Log In
+                <a class="bft-shortcut"
+                   href="{{ url_for('deposit') }}">
+                    <span>📥</span>Recharge
                 </a>
-            {% else %}
-                <a class="button" href="{{ url_for('market') }}">
-                    Explore Market
+
+                <a class="bft-shortcut"
+                   href="{{ url_for('withdraw') }}">
+                    <span>📤</span>Withdraw
                 </a>
-            {% endif %}
-        </section>
+
+                <a class="bft-shortcut"
+                   href="{{ url_for('team') }}">
+                    <span>🔗</span>Invite
+                </a>
+
+                <a class="bft-shortcut"
+                   href="{{ url_for('dashboard') }}">
+                    <span>📱</span>My Account
+                </a>
+
+                <a class="bft-shortcut"
+                   href="mailto:support@bft.com">
+                    <span>🎧</span>Online Service
+                </a>
+
+            </div>
+
+            <section class="bft-section">
+                <h2>📢 BFT Updates</h2>
+
+                <div class="bft-updates">
+                    <strong>Stay Connected!</strong>
+                    <p>
+                        Welcome to BFT. Check this section regularly
+                        for important announcements, platform news
+                        and service updates.
+                    </p>
+                </div>
+            </section>
+
+            <section class="bft-section">
+                <h2>🏢 Company Overview</h2>
+
+                <p>
+                    Discover BFT, our vision, mission, core values
+                    and commitment to providing a better digital
+                    experience.
+                </p>
+
+                <a class="bft-overview-button"
+                   href="{{ url_for('company_overview') }}">
+                    View Company Overview
+                </a>
+            </section>
+
+            <section class="bft-section">
+                <h2>Welcome to BFT</h2>
+
+                <p>
+                    Explore our platform and discover the services
+                    available to registered users.
+                </p>
+
+                {% if not current_user %}
+                    <a class="bft-overview-button"
+                       href="{{ url_for('register') }}">
+                        Create Account
+                    </a>
+
+                    <a class="bft-overview-button"
+                       href="{{ url_for('login') }}">
+                        Log In
+                    </a>
+                {% else %}
+                    <a class="bft-overview-button"
+                       href="{{ url_for('market') }}">
+                        Explore Market
+                    </a>
+                {% endif %}
+            </section>
+
+        </div>
+
+        <script>
+            let bftSlideIndex = 0;
+            const bftSlides = document.querySelectorAll(".bft-slide");
+
+            setInterval(function() {
+                bftSlides[bftSlideIndex].classList.remove("active");
+
+                bftSlideIndex =
+                    (bftSlideIndex + 1) % bftSlides.length;
+
+                bftSlides[bftSlideIndex].classList.add("active");
+            }, 3500);
+        </script>
         """,
     )
+    
+@app.route("/company-overview")
+def company_overview():
+    body = """
+    <style>
+        .company-profile {
+            max-width: 850px;
+            margin: auto;
+        }
+
+        .company-header {
+            background: linear-gradient(135deg, #b71c1c, #ef6c00);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 18px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .company-header h1 {
+            font-size: 30px;
+            margin: 0 0 10px;
+        }
+
+        .company-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 16px;
+            box-shadow: 0 3px 12px rgba(0,0,0,.06);
+        }
+
+        .company-card h2 {
+            color: #b71c1c;
+            margin-top: 0;
+        }
+
+        .company-card li {
+            margin-bottom: 10px;
+        }
+
+        .company-status {
+            background: #fff3e0;
+            border-left: 4px solid #ef6c00;
+            padding: 14px;
+            border-radius: 8px;
+        }
+    </style>
+
+    <div class="company-profile">
+
+        <section class="company-header">
+            <h1>BFT</h1>
+            <h3>Building a Better Digital Experience</h3>
+            <p>Our Business Profile</p>
+        </section>
+
+        <section class="company-card">
+            <h2>About BFT</h2>
+            <p>
+                BFT is an independent digital platform focused on
+                providing users with an organised, accessible and
+                user-friendly online experience.
+            </p>
+            <p>
+                Our platform provides account management,
+                digital services, referral features and
+                communication tools.
+            </p>
+        </section>
+
+        <section class="company-card">
+            <h2>Our Vision</h2>
+            <p>
+                To become a recognised digital platform known
+                for accessibility, innovation, transparency
+                and excellent user experience.
+            </p>
+        </section>
+
+        <section class="company-card">
+            <h2>Our Mission</h2>
+            <p>
+                To provide a simple and organised digital
+                environment where users can access available
+                services, manage their accounts and stay
+                informed about platform updates.
+            </p>
+        </section>
+
+        <section class="company-card">
+            <h2>Our Core Values</h2>
+            <ul>
+                <li><strong>Transparency:</strong>
+                Communicating clearly and honestly.</li>
+
+                <li><strong>Trust:</strong>
+                Building confidence through responsible operations.</li>
+
+                <li><strong>Innovation:</strong>
+                Improving our platform and services.</li>
+
+                <li><strong>Accountability:</strong>
+                Taking responsibility for our operations.</li>
+
+                <li><strong>User Experience:</strong>
+                Making our platform simple and convenient.</li>
+            </ul>
+        </section>
+
+        <section class="company-card">
+            <h2>Our Platform Features</h2>
+            <ul>
+                <li>Personal user accounts and dashboards.</li>
+                <li>Wallet and transaction records.</li>
+                <li>Deposit and withdrawal request facilities.</li>
+                <li>Referral and team management.</li>
+                <li>Gift-code redemption.</li>
+                <li>Bank details management.</li>
+                <li>Platform announcements and updates.</li>
+            </ul>
+        </section>
+
+        <section class="company-card">
+            <h2>Our Commitment to Users</h2>
+            <p>
+                We aim to provide clear information about our
+                services, account activities, applicable charges
+                and platform policies.
+            </p>
+            <p>
+                We encourage users to understand the terms,
+                conditions and risks associated with any
+                financial features.
+            </p>
+        </section>
+
+        <section class="company-card">
+            <h2>Business Registration</h2>
+            <div class="company-status">
+                <strong>Registration Status: Not Yet Registered</strong>
+                <p>
+                    BFT is currently an independent project and
+                    has not yet been registered with the
+                    Corporate Affairs Commission (CAC).
+                </p>
+            </div>
+        </section>
+
+        <section class="company-card">
+            <h2>Our Promise</h2>
+            <p>
+                At BFT, our goal is to keep improving,
+                communicate responsibly and create a better
+                digital experience for every user.
+            </p>
+            <h3 style="color:#b71c1c;">
+                BFT — Transparency, Innovation and Better
+                Digital Experiences.
+            </h3>
+        </section>
+
+        <a class="button" href="{{ url_for('home') }}">
+            Back to Home
+        </a>
+
+    </div>
+    """
+
+    return page("Company Overview", body)
 
 
 # ==========================================
