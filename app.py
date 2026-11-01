@@ -562,6 +562,98 @@ def admin_required(view):
 
     return wrapped
 
+# ==========================================
+# ADMIN PRODUCT MANAGEMENT
+# ==========================================
+
+@app.route("/admin/products", methods=["GET", "POST"])
+@admin_required
+def admin_products():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        image_url = request.form.get("image_url", "").strip()
+        price_text = request.form.get("price", "").strip()
+
+        if not name or not price_text:
+            flash("Product name and price are required.")
+            return redirect(url_for("admin_products"))
+
+        try:
+            price = Decimal(price_text)
+            if not price.is_finite() or price <= 0:
+                raise InvalidOperation
+        except InvalidOperation:
+            flash("Please enter a valid price greater than zero.")
+            return redirect(url_for("admin_products"))
+
+        if len(name) > 150 or len(image_url) > 500:
+            flash("The product name or image URL is too long.")
+            return redirect(url_for("admin_products"))
+
+        if image_url and not image_url.startswith(("https://", "http://")):
+            flash("Please enter a valid image URL.")
+            return redirect(url_for("admin_products"))
+
+        product = Product(
+            name=name,
+            description=description,
+            image_url=image_url,
+            price=price,
+            is_active=True
+        )
+
+        db.session.add(product)
+        db.session.commit()
+
+        flash("Product added successfully!")
+        return redirect(url_for("admin_products"))
+
+    products = Product.query.order_by(Product.created_at.desc()).all()
+
+    body = """
+    <section class="card">
+        <h1>Manage Market Products</h1>
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <label>Product Name</label>
+            <input type="text" name="name" maxlength="150" required>
+
+            <label>Description</label>
+            <textarea name="description" rows="4"></textarea>
+
+            <label>Image URL</label>
+            <input type="url" name="image_url">
+
+            <label>Fixed Price (₦)</label>
+            <input type="number" name="price"
+                   min="0.01" step="0.01" required>
+
+            <button type="submit">Add Product</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>Existing Products</h2>
+
+        {% for product in products %}
+            <p>
+                <strong>{{ product.name }}</strong><br>
+                Price: ₦{{ product.price }}<br>
+                Status: {{ "Active" if product.is_active else "Inactive" }}
+            </p>
+            <hr>
+        {% else %}
+            <p>No products have been added yet.</p>
+        {% endfor %}
+    </section>
+    """
+
+    return page("Manage Products", body, products=products)
+
 
 # ==========================================
 # WEBSITE DESIGN
