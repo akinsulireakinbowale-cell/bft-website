@@ -867,6 +867,20 @@ def page(title, body, **context):
 
 @app.route("/")
 def home():
+    user = get_current_user()
+
+    # If the visitor is already logged in, show the homepage.
+    if user:
+        pass
+
+    # If no account exists yet, send the visitor to registration.
+    elif User.query.first() is None:
+        return redirect(url_for("register"))
+
+    # If an account already exists, send the visitor to login.
+    else:
+        return redirect(url_for("login"))
+
     return page(
         "Home",
         """
