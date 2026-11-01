@@ -2997,27 +2997,6 @@ def deposit_funds():
 
     return page("Deposit Funds", body, user=user)
 
-    return redirect(url_for("request_withdrawal"))
-
-        withdrawal = WithdrawalRequest(
-            user_id=user.id,
-            amount=amount,
-            bank_name=bank_name,
-            account_name=account_name,
-            account_number=account_number,
-            status="pending",
-        )
-
-        db.session.add(withdrawal)
-        db.session.commit()
-
-        flash(
-            "Your withdrawal request has been submitted "
-            "and is awaiting administrator review."
-        )
-
-        return redirect(url_for("my_wallet"))
-
     @app.route("/withdraw", methods=["GET", "POST"])
 def request_withdrawal():
     user = get_current_user()
