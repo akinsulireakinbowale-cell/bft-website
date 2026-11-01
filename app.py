@@ -3325,6 +3325,77 @@ class BankDetails(db.Model):
     )
 
 # ==========================================
+# BFT MARKET MODELS
+# ==========================================
+
+class Product(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=False, default="")
+    image_url = db.Column(db.String(500), nullable=False, default="")
+
+    price = db.Column(db.Numeric(12, 2), nullable=False)
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True,
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+
+class MarketOrder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        index=True,
+    )
+
+    product_id = db.Column(
+        db.Integer,
+        db.ForeignKey("product.id"),
+        nullable=False,
+        index=True,
+    )
+
+    quantity = db.Column(
+        db.Integer,
+        nullable=False,
+    )
+
+    unit_price = db.Column(
+        db.Numeric(12, 2),
+        nullable=False,
+    )
+
+    total_amount = db.Column(
+        db.Numeric(12, 2),
+        nullable=False,
+    )
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="pending",
+        index=True,
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+# ==========================================
 # MARKET PRODUCT MODEL
 # ==========================================
 
