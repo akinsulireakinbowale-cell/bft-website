@@ -2180,17 +2180,21 @@ def gift_code_page():
 # ==========================================
 
 @app.route("/market")
-@login_required
 def market():
+    user = get_current_user()
+
+    if user is None:
+        return redirect(url_for("login"))
+
     body = """
     <section class="card">
-        <h1>Market</h1>
+        <h1>BFT Market</h1>
         <p>Welcome to the BFT Market.</p>
-        <p>Available products will appear here.</p>
+        <p>Products will appear here soon.</p>
     </section>
     """
-    return page("Market", body)
 
+    return page("Market", body)
 
 # ==========================================
 # ORDER PAGE
