@@ -3657,6 +3657,12 @@ def admin_dashboard():
 
         <h1>Administrator Dashboard</h1>
 
+<p>
+    <a class="button" href="{{ url_for('admin_products') }}">
+        Manage Market Products
+    </a>
+</p>
+
         <p>Welcome to BFT user management.</p>
 
 
