@@ -2994,10 +2994,9 @@ def deposit_funds():
         </form>
     </section>
     """
+return page("Deposit Funds", body, user=user)
 
-    return page("Deposit Funds", body, user=user)
-
-    @app.route("/withdraw", methods=["GET", "POST"])
+@app.route("/withdraw", methods=["GET", "POST"])
 def request_withdrawal():
     user = get_current_user()
 
