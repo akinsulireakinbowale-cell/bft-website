@@ -3287,6 +3287,39 @@ class WithdrawalRequest(db.Model):
 
     reviewed_at = db.Column(db.DateTime, nullable=True)
 
+class BankDetails(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    bank_name = db.Column(
+        db.String(120),
+        nullable=False,
+    )
+
+    account_name = db.Column(
+        db.String(120),
+        nullable=False,
+    )
+
+    account_number = db.Column(
+        db.String(30),
+        nullable=False,
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
 # ==========================================
 # EDIT YOUR OWN PROFILE
 # ==========================================
