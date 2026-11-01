@@ -2998,10 +2998,11 @@ def deposit_funds():
     return page("Deposit Funds", body, user=user)
 
     @app.route("/withdraw", methods=["GET", "POST"])
-    def request_withdrawal():
+def request_withdrawal():
     user = get_current_user()
 
-    if user is None:
+    if not user:
+        flash("Please log in to continue.")
         return redirect(url_for("login"))
 
     wallet = Wallet.query.filter_by(user_id=user.id).first()
