@@ -3321,6 +3321,94 @@ class BankDetails(db.Model):
     )
 
 # ==========================================
+# MARKET PRODUCT MODEL
+# ==========================================
+
+class MarketProduct(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=False, default="")
+    price = db.Column(db.Numeric(12, 2), nullable=False)
+
+    image_url = db.Column(db.String(500), nullable=False, default="")
+
+    stock = db.Column(db.Integer, nullable=False, default=0)
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True,
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+
+# ==========================================
+# MARKET ORDER MODEL
+# ==========================================
+
+class MarketOrder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        index=True,
+    )
+
+    product_id = db.Column(
+        db.Integer,
+        db.ForeignKey("market_product.id"),
+        nullable=False,
+        index=True,
+    )
+
+    product_name = db.Column(
+        db.String(150),
+        nullable=False,
+    )
+
+    quantity = db.Column(
+        db.Integer,
+        nullable=False,
+    )
+
+    unit_price = db.Column(
+        db.Numeric(12, 2),
+        nullable=False,
+    )
+
+    total_amount = db.Column(
+        db.Numeric(12, 2),
+        nullable=False,
+    )
+
+    reference = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=False,
+    )
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="pending",
+        index=True,
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+# ==========================================
 # EDIT YOUR OWN PROFILE
 # ==========================================
 
