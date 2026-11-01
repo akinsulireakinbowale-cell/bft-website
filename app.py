@@ -2999,7 +2999,6 @@ def deposit_funds():
 
     @app.route("/withdraw", methods=["GET", "POST"])
 def request_withdrawal():
-    user = get_current_user()
 
     if not user:
         flash("Please log in to continue.")
