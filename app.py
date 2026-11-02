@@ -5014,3 +5014,25 @@ with app.app_context():
             """)
         )
         db.session.commit()
+
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("market_order")
+    }
+
+    migrations = {
+        "earnings_start_at": "ALTER TABLE market_order ADD COLUMN earnings_start_at TIMESTAMP NULL",
+        "earnings_end_at": "ALTER TABLE market_order ADD COLUMN earnings_end_at TIMESTAMP NULL",
+        "last_earning_at": "ALTER TABLE market_order ADD COLUMN last_earning_at TIMESTAMP NULL",
+        "earnings_paid_days": "ALTER TABLE market_order ADD COLUMN earnings_paid_days INTEGER NOT NULL DEFAULT 0",
+    }
+
+    for column_name, sql in migrations.items():
+        if column_name not in existing_columns:
+            db.session.execute(text(sql))
+
+    db.session.commit()
