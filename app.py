@@ -5051,6 +5051,26 @@ with app.app_context():
 
     db.session.commit()
 
+        foreign_keys = db.session.execute(text("""
+        SELECT
+            tc.constraint_name,
+            ccu.table_name AS referenced_table,
+            kcu.column_name,
+            ccu.column_name AS referenced_column
+        FROM information_schema.table_constraints AS tc
+        JOIN information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+           AND tc.constraint_schema = kcu.constraint_schema
+        JOIN information_schema.constraint_column_usage AS ccu
+            ON ccu.constraint_name = tc.constraint_name
+           AND ccu.constraint_schema = tc.constraint_schema
+        WHERE tc.table_name = 'market_order'
+          AND tc.constraint_type = 'FOREIGN KEY'
+          AND kcu.column_name = 'product_id'
+    """)).fetchall()
+
+    app.logger.warning("BFT PRODUCT FOREIGN KEYS: %s", foreign_keys)
+
     from sqlalchemy import text
 
     product_check = db.session.execute(text("""
