@@ -523,6 +523,26 @@ def get_current_user():
         return None
 
     return user
+    
+def admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        user = get_current_user()
+
+        if user is None:
+            flash(
+                "Please log in to continue.",
+                "error",
+            )
+            return redirect(url_for("login"))
+
+        if not is_admin(user):
+            abort(403)
+
+        return view(*args, **kwargs)
+
+    return wrapped
+    
 
 # ==========================================
 # ADMIN PRODUCT MANAGEMENT
@@ -748,27 +768,6 @@ def login_required(view):
         return view(*args, **kwargs)
 
     return wrapped
-
-
-def admin_required(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        user = get_current_user()
-
-        if user is None:
-            flash(
-                "Please log in to continue.",
-                "error",
-            )
-            return redirect(url_for("login"))
-
-        if not is_admin(user):
-            abort(403)
-
-        return view(*args, **kwargs)
-
-    return wrapped
-
 
 
 # ==========================================
