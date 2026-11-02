@@ -2502,6 +2502,109 @@ def buy_product(product_id):
     return redirect(url_for("market"))
 
 # ==========================================
+# CLAIM DAILY PRODUCT EARNINGS
+# ==========================================
+
+@app.route("/claim-earnings/<int:order_id>", methods=["POST"])
+@login_required
+def claim_earnings(order_id):
+    user = get_current_user()
+
+    try:
+        order = MarketOrder.query.filter_by(
+            id=order_id,
+            user_id=user.id,
+            status="approved"
+        ).with_for_update().first_or_404()
+
+        now = datetime.utcnow()
+
+        if not order.earnings_start_at or not order.earnings_end_at:
+            flash("This product has no valid earnings period.")
+            return redirect(url_for("my_orders"))
+
+        if now > order.earnings_end_at or order.earnings_paid_days >= 90:
+            flash("This product's earnings period has ended.")
+            return redirect(url_for("my_orders"))
+
+        last_time = order.last_earning_at or order.earnings_start_at
+
+        if now < last_time + timedelta(hours=24):
+            flash("Your next earnings are not ready yet.")
+            return redirect(url_for("my_orders"))
+
+        day_number = order.earnings_paid_days + 1
+
+        reference = f"BFT-ORDER-{order.id}-DAY-{day_number}"
+
+        existing = ProductEarning.query.filter_by(
+            reference=reference
+        ).first()
+
+        if existing:
+            flash("Today's earnings have already been claimed.")
+            return redirect(url_for("my_orders"))
+
+        product = Product.query.filter_by(
+            id=order.product_id
+        ).first()
+
+        if product is None:
+            flash("The purchased product could not be found.")
+            return redirect(url_for("my_orders"))
+
+        amount = Decimal(str(product.daily_income))
+
+        if not amount.is_finite() or amount <= 0:
+            flash("This product has no valid daily earnings amount.")
+            return redirect(url_for("my_orders"))
+
+        wallet = Wallet.query.filter_by(
+            user_id=user.id
+        ).with_for_update().first()
+
+        if wallet is None:
+            flash("Your wallet could not be found.")
+            return redirect(url_for("my_orders"))
+
+        wallet.balance = Decimal(str(wallet.balance)) + amount
+
+        earning = ProductEarning(
+            user_id=user.id,
+            order_id=order.id,
+            amount=amount,
+            status="credited",
+            reference=reference,
+            credited_at=now
+        )
+
+        transaction = WalletTransaction(
+            wallet_id=wallet.id,
+            user_id=user.id,
+            transaction_type="credit",
+            amount=amount,
+            status="completed",
+            reference=secrets.token_hex(16),
+            description=f"Daily earnings for order #{order.id}"
+        )
+
+        order.earnings_paid_days = day_number
+        order.last_earning_at = now
+
+        db.session.add(earning)
+        db.session.add(transaction)
+        db.session.commit()
+
+        flash(f"Congratulations! ₦{amount:,.2f} has been credited to your wallet.")
+
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("BFT earnings claim failed.")
+        flash("Your claim could not be completed. Please try again.")
+
+    return redirect(url_for("my_orders"))
+
+# ==========================================
 # MY PRODUCT ORDERS AND ACTIVE PRODUCTS
 # ==========================================
 
