@@ -1092,11 +1092,11 @@ def page(title, body, **context):
         Market
     </a>
 
-    <a href="{{ url_for('my_orders') }}"
-       class="{% if request.endpoint == 'my_orders' %}active{% endif %}">
-        <span class="nav-icon">▤</span>
-        Order
-    </a>
+    <a class="my-action"
+   href="{{ url_for('my_orders') }}">
+    <div class="my-icon">▤</div>
+    My Order
+</a>
 
     <a href="{{ url_for('team') }}"
        class="{% if request.endpoint == 'team' %}active{% endif %}">
