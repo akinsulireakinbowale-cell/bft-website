@@ -2696,6 +2696,103 @@ def my_orders():
         orders=orders
     )
 
+# ==========================================
+# USER EARNINGS HISTORY
+# ==========================================
+
+@app.route("/earnings-history")
+@login_required
+def earnings_history():
+
+    user = get_current_user()
+
+    earnings = ProductEarning.query.filter_by(
+        user_id=user.id
+    ).order_by(
+        ProductEarning.created_at.desc()
+    ).all()
+
+    total_earnings = sum(
+        (
+            Decimal(str(item.amount))
+            for item in earnings
+            if item.status == "credited"
+        ),
+        Decimal("0.00")
+    )
+
+    body = """
+    <section class="card">
+
+        <h1>Earnings History</h1>
+
+        <div class="card">
+            <h3>Total Verified Earnings</h3>
+            <h2>₦{{ "%.2f"|format(total_earnings) }}</h2>
+        </div>
+
+        {% for item in earnings %}
+
+            <div class="card">
+
+                <h3>Product Earning #{{ item.id }}</h3>
+
+                <p>
+                    <strong>Order ID:</strong>
+                    {{ item.order_id }}
+                </p>
+
+                <p>
+                    <strong>Amount:</strong>
+                    ₦{{ "%.2f"|format(item.amount) }}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    {{ item.status|capitalize }}
+                </p>
+
+                <p>
+                    <strong>Reference:</strong>
+                    {{ item.reference }}
+                </p>
+
+                <p>
+                    <strong>Recorded:</strong>
+                    {{ item.created_at.strftime("%d %B %Y, %I:%M %p") }}
+                </p>
+
+                {% if item.credited_at %}
+                    <p>
+                        <strong>Credited:</strong>
+                        {{ item.credited_at.strftime("%d %B %Y, %I:%M %p") }}
+                    </p>
+                {% endif %}
+
+            </div>
+
+        {% else %}
+
+            <p>No earnings have been recorded yet.</p>
+
+        {% endfor %}
+
+        <p>
+            <a class="button" href="{{ url_for('my_orders') }}">
+                Back to My Orders
+            </a>
+        </p>
+
+    </section>
+    """
+
+    return page(
+        "Earnings History",
+        body,
+        earnings=earnings,
+        total_earnings=total_earnings
+    )
+
 @app.route("/admin/orders/<int:order_id>/approve", methods=["POST"])
 @admin_required
 def approve_market_order(order_id):
