@@ -2805,6 +2805,7 @@ def my_orders():
             order.status == "approved"
             and next_due is not None
             and now >= next_due
+            and order.earnings_end_at is not None
             and now <= order.earnings_end_at
             and order.earnings_paid_days < 90
             and daily_income > 0
@@ -2821,16 +2822,13 @@ def my_orders():
     <section class="card">
 
         <h1>My Product Orders</h1>
-
         <h2>My Active Products</h2>
 
         {% for item in order_views %}
 
             {% set order = item.order %}
 
-            <div class="card"
-                 style="border:1px solid #174ea6;
-                        margin-bottom:20px;">
+            <div class="card" style="margin-bottom:20px;">
 
                 <h3>{{ order.product_name }}</h3>
 
@@ -2849,15 +2847,13 @@ def my_orders():
                       and order.earnings_end_at %}
 
                     <div style="
-                        background:#e8f0fe;
+                        background:#fff3e0;
                         padding:15px;
                         border-radius:10px;
                         margin-top:15px;
                     ">
 
-                        <h3 style="color:#174ea6;">
-                            Active Product
-                        </h3>
+                        <h3>Active Product</h3>
 
                         <p>
                             <strong>Daily Income:</strong>
@@ -2869,39 +2865,20 @@ def my_orders():
                             {{ order.earnings_paid_days }}/90
                         </p>
 
-                        {% if item.can_claim %}
+                        {% if item.daily_income <= 0 %}
 
-                            <h3 style="color:green;">
-                                Daily Income Available!
-                            </h3>
+                            <p style="color:red;">
+                                Daily income has not been configured
+                                for this product.
+                            </p>
 
-                            <form method="POST"
-                                  action="{{ url_for(
-                                      'claim_earnings',
-                                      order_id=order.id
-                                  ) }}">
+                        {% elif order.earnings_paid_days >= 90 %}
 
-                                <input type="hidden"
-                                       name="csrf_token"
-                                       value="{{ csrf_token() }}">
-
-                                <button type="submit"
-                                        class="button"
-                                        style="
-                                            background:green;
-                                            color:white;
-                                            border:0;
-                                            padding:12px 20px;
-                                            cursor:pointer;
-                                        ">
-                                    Claim Earnings
-                                </button>
-
-                            </form>
+                            <p style="color:green;">
+                                All 90 claims have been completed.
+                            </p>
 
                         {% else %}
-
-                            <p><strong>Next Claim Countdown:</strong></p>
 
                             <div class="product-countdown"
                                  data-start="{{ (
@@ -2911,12 +2888,50 @@ def my_orders():
                                  data-end="{{ order.earnings_end_at.strftime(
                                      '%Y-%m-%dT%H:%M:%SZ'
                                  ) }}"
-                                 style="
-                                     font-size:22px;
-                                     font-weight:bold;
-                                     color:#174ea6;
-                                 ">
-                                Calculating...
+                                 data-claims="{{ order.earnings_paid_days }}">
+
+                                <p><strong>Next Claim Countdown:</strong></p>
+
+                                <div class="timer-display"
+                                     style="
+                                        font-size:22px;
+                                        font-weight:bold;
+                                        color:#b71c1c;
+                                     ">
+                                    Calculating...
+                                </div>
+
+                                <p class="ready-message"
+                                   style="display:none;color:green;">
+                                    Your daily income is ready!
+                                </p>
+
+                                <form method="POST"
+                                      action="{{ url_for(
+                                          'claim_earnings',
+                                          order_id=order.id
+                                      ) }}"
+                                      class="claim-form"
+                                      style="display:none;">
+
+                                    <input type="hidden"
+                                           name="csrf_token"
+                                           value="{{ csrf_token() }}">
+
+                                    <button type="submit"
+                                            style="
+                                                background:#b71c1c;
+                                                color:white;
+                                                border:0;
+                                                padding:12px 20px;
+                                                border-radius:8px;
+                                                cursor:pointer;
+                                            ">
+                                        Claim Earnings
+                                    </button>
+
+                                </form>
+
                             </div>
 
                         {% endif %}
@@ -2941,6 +2956,7 @@ def my_orders():
 
     <script>
     function updateProductCountdowns() {
+
         document.querySelectorAll(
             ".product-countdown"
         ).forEach(function(timer) {
@@ -2954,18 +2970,40 @@ def my_orders():
             ).getTime();
 
             const nextDue = start + 86400000;
-            const remaining = nextDue - Date.now();
+            const now = Date.now();
+            const remaining = nextDue - now;
 
-            if (Date.now() > end) {
-                timer.textContent = "Earnings period ended";
+            const display = timer.querySelector(
+                ".timer-display"
+            );
+
+            const form = timer.querySelector(
+                ".claim-form"
+            );
+
+            const readyMessage = timer.querySelector(
+                ".ready-message"
+            );
+
+            if (now > end) {
+                display.textContent = "Earnings period ended";
+                form.style.display = "none";
+                readyMessage.style.display = "none";
                 return;
             }
 
             if (remaining <= 0) {
-                timer.textContent =
-                    "Your income is ready. Refresh to claim.";
+
+                display.textContent = "00h 00m 00s";
+
+                readyMessage.style.display = "block";
+                form.style.display = "block";
+
                 return;
             }
+
+            form.style.display = "none";
+            readyMessage.style.display = "none";
 
             const hours = Math.floor(
                 remaining / 3600000
@@ -2979,14 +3017,16 @@ def my_orders():
                 (remaining % 60000) / 1000
             );
 
-            timer.textContent =
+            display.textContent =
                 hours + "h " +
                 minutes + "m " +
                 seconds + "s remaining";
+
         });
     }
 
     updateProductCountdowns();
+
     setInterval(updateProductCountdowns, 1000);
     </script>
     """
@@ -2995,7 +3035,7 @@ def my_orders():
         "My Product Orders",
         body,
         order_views=order_views
-        )
+    )
 
 # ==========================================
 # USER EARNINGS HISTORY
