@@ -3699,6 +3699,13 @@ class MarketOrder(db.Model):
         index=True,
     )
 
+    reference = db.Column(
+        db.String(100),
+        nullable=False,
+        unique=True,
+        default=lambda: secrets.token_hex(16),
+    )
+
     created_at = db.Column(
         db.DateTime,
         nullable=False,
