@@ -5046,7 +5046,56 @@ with app.app_context():
             db.session.execute(text(sql))
 
     db.session.commit()
+    # ==========================================
+    # FIX MARKET ORDER PRODUCT FOREIGN KEY
+    # ==========================================
 
+    fk_info = db.session.execute(text("""
+        SELECT ccu.table_name AS referenced_table
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+            ON tc.constraint_name = kcu.constraint_name
+           AND tc.constraint_schema = kcu.constraint_schema
+        JOIN information_schema.constraint_column_usage ccu
+            ON ccu.constraint_name = tc.constraint_name
+           AND ccu.constraint_schema = tc.constraint_schema
+        WHERE tc.table_name = 'market_order'
+          AND tc.constraint_name = 'market_order_product_id_fkey'
+          AND tc.constraint_type = 'FOREIGN KEY'
+          AND kcu.column_name = 'product_id'
+    """)).scalar()
+
+    if fk_info == "market_product":
+
+        orphan_count = db.session.execute(text("""
+            SELECT COUNT(*)
+            FROM market_order mo
+            LEFT JOIN product p ON p.id = mo.product_id
+            WHERE p.id IS NULL
+        """)).scalar()
+
+        if orphan_count != 0:
+            raise RuntimeError(
+                "Foreign key migration stopped: unmatched Product records found."
+            )
+
+        db.session.execute(text("""
+            ALTER TABLE market_order
+            DROP CONSTRAINT market_order_product_id_fkey
+        """))
+
+        db.session.execute(text("""
+            ALTER TABLE market_order
+            ADD CONSTRAINT market_order_product_id_fkey
+            FOREIGN KEY (product_id)
+            REFERENCES product(id)
+        """))
+
+        db.session.commit()
+
+        app.logger.warning(
+            "BFT MIGRATION: MarketOrder now references product.id"
+        )
     # Check the actual product foreign key
     foreign_keys = db.session.execute(text("""
         SELECT
