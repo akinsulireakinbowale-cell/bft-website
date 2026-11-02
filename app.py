@@ -2501,6 +2501,100 @@ def buy_product(product_id):
 
     return redirect(url_for("market"))
 
+# ==========================================
+# USER MARKET ORDER HISTORY
+# ==========================================
+
+@app.route("/my-orders")
+@login_required
+def my_orders():
+
+    user = get_current_user()
+
+    orders = MarketOrder.query.filter_by(
+        user_id=user.id
+    ).order_by(
+        MarketOrder.created_at.desc()
+    ).all()
+
+    body = """
+    <section class="card">
+
+        <h1>My Product Orders</h1>
+
+        <p>View your purchase history below.</p>
+
+        {% for order in orders %}
+
+            <div class="card">
+
+                <h3>{{ order.product_name }}</h3>
+
+                <p>
+                    <strong>Order ID:</strong>
+                    {{ order.id }}
+                </p>
+
+                <p>
+                    <strong>Quantity:</strong>
+                    {{ order.quantity }}
+                </p>
+
+                <p>
+                    <strong>Unit Price:</strong>
+                    ₦{{ "%.2f"|format(order.unit_price) }}
+                </p>
+
+                <p>
+                    <strong>Total Amount:</strong>
+                    ₦{{ "%.2f"|format(order.total_amount) }}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    {{ order.status|capitalize }}
+                </p>
+
+                <p>
+                    <strong>Purchase Date:</strong>
+                    {{ order.created_at.strftime("%d %B %Y, %I:%M %p") }}
+                </p>
+
+                {% if order.earnings_start_at %}
+                    <p>
+                        <strong>Tracking Started:</strong>
+                        {{ order.earnings_start_at.strftime("%d %B %Y, %I:%M %p") }}
+                    </p>
+
+                    <p>
+                        <strong>Tracking Ends:</strong>
+                        {{ order.earnings_end_at.strftime("%d %B %Y, %I:%M %p") }}
+                    </p>
+                {% endif %}
+
+            </div>
+
+        {% else %}
+
+            <p>You have not purchased any products yet.</p>
+
+        {% endfor %}
+
+        <p>
+            <a class="button" href="{{ url_for('market') }}">
+                Back to Market
+            </a>
+        </p>
+
+    </section>
+    """
+
+    return page(
+        "My Product Orders",
+        body,
+        orders=orders
+    )
+
 @app.route("/admin/orders/<int:order_id>/approve", methods=["POST"])
 @admin_required
 def approve_market_order(order_id):
