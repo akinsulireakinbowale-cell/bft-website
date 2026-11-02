@@ -2605,20 +2605,56 @@ def claim_earnings(order_id):
     return redirect(url_for("my_orders"))
 
 # ==========================================
-# MY PRODUCT ORDERS AND ACTIVE PRODUCTS
+# MY PRODUCT ORDERS AND CLAIM EARNINGS
 # ==========================================
 
 @app.route("/my-orders")
 @login_required
 def my_orders():
-
     user = get_current_user()
+    now = datetime.utcnow()
 
     orders = MarketOrder.query.filter_by(
         user_id=user.id
     ).order_by(
         MarketOrder.created_at.desc()
     ).all()
+
+    order_views = []
+
+    for order in orders:
+        product = Product.query.get(order.product_id)
+
+        daily_income = (
+            Decimal(str(product.daily_income))
+            if product else Decimal("0")
+        )
+
+        last_time = (
+            order.last_earning_at
+            or order.earnings_start_at
+        )
+
+        next_due = (
+            last_time + timedelta(hours=24)
+            if last_time else None
+        )
+
+        can_claim = (
+            order.status == "approved"
+            and next_due is not None
+            and now >= next_due
+            and now <= order.earnings_end_at
+            and order.earnings_paid_days < 90
+            and daily_income > 0
+        )
+
+        order_views.append({
+            "order": order,
+            "daily_income": daily_income,
+            "next_due": next_due,
+            "can_claim": can_claim
+        })
 
     body = """
     <section class="card">
@@ -2627,42 +2663,25 @@ def my_orders():
 
         <h2>My Active Products</h2>
 
-        <p>
-            Your purchased products and individual countdowns
-            are displayed below.
-        </p>
+        {% for item in order_views %}
 
-        {% for order in orders %}
+            {% set order = item.order %}
 
             <div class="card"
-                 style="border:1px solid #174ea6; margin-bottom:20px;">
+                 style="border:1px solid #174ea6;
+                        margin-bottom:20px;">
 
                 <h3>{{ order.product_name }}</h3>
 
-                <p>
-                    <strong>Order ID:</strong>
-                    {{ order.id }}
-                </p>
+                <p><strong>Order ID:</strong> {{ order.id }}</p>
 
-                <p>
-                    <strong>Quantity:</strong>
-                    {{ order.quantity }}
-                </p>
+                <p><strong>Quantity:</strong> {{ order.quantity }}</p>
 
-                <p>
-                    <strong>Purchase Amount:</strong>
-                    ₦{{ order.total_amount }}
-                </p>
+                <p><strong>Purchase Amount:</strong>
+                    ₦{{ order.total_amount }}</p>
 
-                <p>
-                    <strong>Status:</strong>
-                    {{ order.status|capitalize }}
-                </p>
-
-                <p>
-                    <strong>Purchase Date:</strong>
-                    {{ order.created_at.strftime("%d %B %Y, %I:%M %p") }}
-                </p>
+                <p><strong>Status:</strong>
+                    {{ order.status|capitalize }}</p>
 
                 {% if order.status == "approved"
                       and order.earnings_start_at
@@ -2680,42 +2699,68 @@ def my_orders():
                         </h3>
 
                         <p>
-                            <strong>Next 24-hour checkpoint:</strong>
-                        </p>
-
-                        <div
-                            class="product-countdown"
-                            data-start="{{ order.last_earning_at.strftime('%Y-%m-%dT%H:%M:%SZ') if order.last_earning_at else order.earnings_start_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"
-                            data-end="{{ order.earnings_end_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"
-                            style="
-                                font-size:22px;
-                                font-weight:bold;
-                                color:#174ea6;
-                            "
-                        >
-                            Calculating...
-                        </div>
-
-                        <p>
-                            <strong>Tracking started:</strong>
-                            {{ order.earnings_start_at.strftime("%d %B %Y, %I:%M %p") }}
+                            <strong>Daily Income:</strong>
+                            ₦{{ "%.2f"|format(item.daily_income) }}
                         </p>
 
                         <p>
-                            <strong>Tracking ends:</strong>
-                            {{ order.earnings_end_at.strftime("%d %B %Y, %I:%M %p") }}
+                            <strong>Claims completed:</strong>
+                            {{ order.earnings_paid_days }}/90
                         </p>
 
-                        <p>
-                            <strong>Tracking period:</strong>
-                            90 days
-                        </p>
+                        {% if item.can_claim %}
+
+                            <h3 style="color:green;">
+                                Daily Income Available!
+                            </h3>
+
+                            <form method="POST"
+                                  action="{{ url_for(
+                                      'claim_earnings',
+                                      order_id=order.id
+                                  ) }}">
+
+                                <input type="hidden"
+                                       name="csrf_token"
+                                       value="{{ csrf_token() }}">
+
+                                <button type="submit"
+                                        class="button"
+                                        style="
+                                            background:green;
+                                            color:white;
+                                            border:0;
+                                            padding:12px 20px;
+                                            cursor:pointer;
+                                        ">
+                                    Claim Earnings
+                                </button>
+
+                            </form>
+
+                        {% else %}
+
+                            <p><strong>Next Claim Countdown:</strong></p>
+
+                            <div class="product-countdown"
+                                 data-start="{{ (
+                                     order.last_earning_at
+                                     or order.earnings_start_at
+                                 ).strftime('%Y-%m-%dT%H:%M:%SZ') }}"
+                                 data-end="{{ order.earnings_end_at.strftime(
+                                     '%Y-%m-%dT%H:%M:%SZ'
+                                 ) }}"
+                                 style="
+                                     font-size:22px;
+                                     font-weight:bold;
+                                     color:#174ea6;
+                                 ">
+                                Calculating...
+                            </div>
+
+                        {% endif %}
 
                     </div>
-
-                {% elif order.status == "approved" %}
-
-                    <p>Active order. Tracking dates are not available.</p>
 
                 {% endif %}
 
@@ -2727,22 +2772,17 @@ def my_orders():
 
         {% endfor %}
 
-        <p>
-            <a class="button" href="{{ url_for('market') }}">
-                Back to Market
-            </a>
-        </p>
+        <a class="button" href="{{ url_for('market') }}">
+            Back to Market
+        </a>
 
     </section>
 
     <script>
     function updateProductCountdowns() {
-
-        const timers = document.querySelectorAll(
+        document.querySelectorAll(
             ".product-countdown"
-        );
-
-        timers.forEach(function(timer) {
+        ).forEach(function(timer) {
 
             const start = new Date(
                 timer.dataset.start
@@ -2752,32 +2792,30 @@ def my_orders():
                 timer.dataset.end
             ).getTime();
 
-            const now = Date.now();
+            const nextDue = start + 86400000;
+            const remaining = nextDue - Date.now();
 
-            if (now >= end) {
-                timer.textContent = "Tracking period ended";
+            if (Date.now() > end) {
+                timer.textContent = "Earnings period ended";
                 return;
             }
 
-            const nextDue = start + (24 * 60 * 60 * 1000);
-
-            const remaining = nextDue - now;
-
             if (remaining <= 0) {
-                timer.textContent = "24-hour checkpoint reached";
+                timer.textContent =
+                    "Your income is ready. Refresh to claim.";
                 return;
             }
 
             const hours = Math.floor(
-                remaining / (1000 * 60 * 60)
+                remaining / 3600000
             );
 
             const minutes = Math.floor(
-                (remaining % (1000 * 60 * 60)) / (1000 * 60)
+                (remaining % 3600000) / 60000
             );
 
             const seconds = Math.floor(
-                (remaining % (1000 * 60)) / 1000
+                (remaining % 60000) / 1000
             );
 
             timer.textContent =
@@ -2788,7 +2826,6 @@ def my_orders():
     }
 
     updateProductCountdowns();
-
     setInterval(updateProductCountdowns, 1000);
     </script>
     """
@@ -2796,8 +2833,8 @@ def my_orders():
     return page(
         "My Product Orders",
         body,
-        orders=orders
-    )
+        order_views=order_views
+        )
 
 # ==========================================
 # USER EARNINGS HISTORY
