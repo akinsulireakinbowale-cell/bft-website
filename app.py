@@ -851,10 +851,7 @@ def page(title, body, **context):
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }} | BFT</title>
 
     <style>
@@ -869,8 +866,9 @@ def page(title, body, **context):
 
     <nav>
         {% if current_user %}
-            <a href="{{ url_for('dashboard') }}"
-   class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <a href="{{ url_for('dashboard') }}">
+                Dashboard
+            </a>
 
             {% if current_user_is_admin %}
                 <a href="{{ url_for('admin_dashboard') }}">
@@ -882,13 +880,8 @@ def page(title, body, **context):
                 Log out
             </a>
         {% else %}
-            <a href="{{ url_for('login') }}">
-                Log in
-            </a>
-
-            <a href="{{ url_for('register') }}">
-                Register
-            </a>
+            <a href="{{ url_for('login') }}">Log in</a>
+            <a href="{{ url_for('register') }}">Register</a>
         {% endif %}
     </nav>
 </header>
@@ -919,8 +912,8 @@ def page(title, body, **context):
         Market
     </a>
 
-    <a href="{{ url_for('order') }}"
-       class="{% if request.endpoint == 'order' %}active{% endif %}">
+    <a href="{{ url_for('my_orders') }}"
+       class="{% if request.endpoint == 'my_orders' %}active{% endif %}">
         <span class="nav-icon">▤</span>
         Order
     </a>
@@ -954,7 +947,6 @@ def page(title, body, **context):
     values.update(context)
 
     return render_template_string(template, **values)
-
 
 
 # ==========================================
