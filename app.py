@@ -2502,7 +2502,7 @@ def buy_product(product_id):
     return redirect(url_for("market"))
 
 # ==========================================
-# USER MARKET ORDER HISTORY
+# MY PRODUCT ORDERS AND ACTIVE PRODUCTS
 # ==========================================
 
 @app.route("/my-orders")
@@ -2522,17 +2522,17 @@ def my_orders():
 
         <h1>My Product Orders</h1>
 
-        <p>View your purchase history below.</p>
+        <h2>My Active Products</h2>
+
+        <p>
+            Your purchased products and individual countdowns
+            are displayed below.
+        </p>
 
         {% for order in orders %}
 
-            <div class="card">
-
-            <p>
-    <a class="button" href="{{ url_for('my_orders') }}">
-        My Product Orders
-    </a>
-</p>
+            <div class="card"
+                 style="border:1px solid #174ea6; margin-bottom:20px;">
 
                 <h3>{{ order.product_name }}</h3>
 
@@ -2547,13 +2547,8 @@ def my_orders():
                 </p>
 
                 <p>
-                    <strong>Unit Price:</strong>
-                    ₦{{ "%.2f"|format(order.unit_price) }}
-                </p>
-
-                <p>
-                    <strong>Total Amount:</strong>
-                    ₦{{ "%.2f"|format(order.total_amount) }}
+                    <strong>Purchase Amount:</strong>
+                    ₦{{ order.total_amount }}
                 </p>
 
                 <p>
@@ -2566,16 +2561,59 @@ def my_orders():
                     {{ order.created_at.strftime("%d %B %Y, %I:%M %p") }}
                 </p>
 
-                {% if order.earnings_start_at %}
-                    <p>
-                        <strong>Tracking Started:</strong>
-                        {{ order.earnings_start_at.strftime("%d %B %Y, %I:%M %p") }}
-                    </p>
+                {% if order.status == "approved"
+                      and order.earnings_start_at
+                      and order.earnings_end_at %}
 
-                    <p>
-                        <strong>Tracking Ends:</strong>
-                        {{ order.earnings_end_at.strftime("%d %B %Y, %I:%M %p") }}
-                    </p>
+                    <div style="
+                        background:#e8f0fe;
+                        padding:15px;
+                        border-radius:10px;
+                        margin-top:15px;
+                    ">
+
+                        <h3 style="color:#174ea6;">
+                            Active Product
+                        </h3>
+
+                        <p>
+                            <strong>Next 24-hour checkpoint:</strong>
+                        </p>
+
+                        <div
+                            class="product-countdown"
+                            data-start="{{ order.last_earning_at.strftime('%Y-%m-%dT%H:%M:%SZ') if order.last_earning_at else order.earnings_start_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"
+                            data-end="{{ order.earnings_end_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"
+                            style="
+                                font-size:22px;
+                                font-weight:bold;
+                                color:#174ea6;
+                            "
+                        >
+                            Calculating...
+                        </div>
+
+                        <p>
+                            <strong>Tracking started:</strong>
+                            {{ order.earnings_start_at.strftime("%d %B %Y, %I:%M %p") }}
+                        </p>
+
+                        <p>
+                            <strong>Tracking ends:</strong>
+                            {{ order.earnings_end_at.strftime("%d %B %Y, %I:%M %p") }}
+                        </p>
+
+                        <p>
+                            <strong>Tracking period:</strong>
+                            90 days
+                        </p>
+
+                    </div>
+
+                {% elif order.status == "approved" %}
+
+                    <p>Active order. Tracking dates are not available.</p>
+
                 {% endif %}
 
             </div>
@@ -2593,6 +2631,63 @@ def my_orders():
         </p>
 
     </section>
+
+    <script>
+    function updateProductCountdowns() {
+
+        const timers = document.querySelectorAll(
+            ".product-countdown"
+        );
+
+        timers.forEach(function(timer) {
+
+            const start = new Date(
+                timer.dataset.start
+            ).getTime();
+
+            const end = new Date(
+                timer.dataset.end
+            ).getTime();
+
+            const now = Date.now();
+
+            if (now >= end) {
+                timer.textContent = "Tracking period ended";
+                return;
+            }
+
+            const nextDue = start + (24 * 60 * 60 * 1000);
+
+            const remaining = nextDue - now;
+
+            if (remaining <= 0) {
+                timer.textContent = "24-hour checkpoint reached";
+                return;
+            }
+
+            const hours = Math.floor(
+                remaining / (1000 * 60 * 60)
+            );
+
+            const minutes = Math.floor(
+                (remaining % (1000 * 60 * 60)) / (1000 * 60)
+            );
+
+            const seconds = Math.floor(
+                (remaining % (1000 * 60)) / 1000
+            );
+
+            timer.textContent =
+                hours + "h " +
+                minutes + "m " +
+                seconds + "s remaining";
+        });
+    }
+
+    updateProductCountdowns();
+
+    setInterval(updateProductCountdowns, 1000);
+    </script>
     """
 
     return page(
