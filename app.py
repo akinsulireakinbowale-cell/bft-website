@@ -2472,6 +2472,47 @@ def buy_product(product_id):
 
     return redirect(url_for("market"))
 
+<span class="market-status">
+    AVAILABLE
+</span>
+
+<form
+    method="POST"
+    action="{{ url_for('buy_product', product_id=product.id) }}"
+    style="margin-top: 15px;"
+>
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <label for="quantity-{{ product.id }}">
+        Quantity
+    </label>
+
+    <select
+        name="quantity"
+        id="quantity-{{ product.id }}"
+        required
+        style="width: 100%; padding: 12px; margin: 8px 0;"
+    >
+        {% for number in range(1, 6) %}
+            <option value="{{ number }}">
+                {{ number }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <button
+        type="submit"
+        class="button"
+        style="width: 100%; background: #d62828; color: white;"
+    >
+        Buy Product
+    </button>
+</form>
+
 
 # ==========================================
 # ORDER PAGE
