@@ -524,6 +524,200 @@ def get_current_user():
 
     return user
 
+# ==========================================
+# ADMIN PRODUCT MANAGEMENT
+# ==========================================
+
+@app.route("/admin/products", methods=["GET", "POST"])
+@admin_required
+def admin_products():
+
+    if request.method == "POST":
+
+        product_id = request.form.get("product_id", "").strip()
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        image_url = request.form.get("image_url", "").strip()
+        price_text = request.form.get("price", "").strip()
+        daily_income_text = request.form.get("daily_income", "").strip()
+
+        if not name or not price_text or not daily_income_text:
+            flash("Product name, price and daily income are required.")
+            return redirect(url_for("admin_products"))
+
+        try:
+            price = Decimal(price_text)
+            daily_income = Decimal(daily_income_text)
+
+            if (
+                not price.is_finite()
+                or not daily_income.is_finite()
+                or price <= 0
+                or daily_income < 0
+            ):
+                raise InvalidOperation
+
+        except (InvalidOperation, ValueError):
+            flash("Please enter valid product amounts.")
+            return redirect(url_for("admin_products"))
+
+        if len(name) > 150 or len(image_url) > 500:
+            flash("Product name or image URL is too long.")
+            return redirect(url_for("admin_products"))
+
+        if image_url and not image_url.startswith(("https://", "http://")):
+            flash("Please enter a valid image URL.")
+            return redirect(url_for("admin_products"))
+
+        try:
+            if product_id:
+                # UPDATE EXISTING PRODUCT
+                try:
+                    product_id = int(product_id)
+                except ValueError:
+                    flash("Invalid product ID.")
+                    return redirect(url_for("admin_products"))
+
+                product = db.session.get(Product, product_id)
+
+                if product is None:
+                    flash("Product not found.")
+                    return redirect(url_for("admin_products"))
+
+                product.name = name
+                product.description = description
+                product.image_url = image_url
+                product.price = price
+                product.daily_income = daily_income
+
+                flash("Existing product updated successfully!")
+
+            else:
+                # CREATE NEW PRODUCT
+                product = Product(
+                    name=name,
+                    description=description,
+                    image_url=image_url,
+                    price=price,
+                    daily_income=daily_income,
+                    is_active=True
+                )
+
+                db.session.add(product)
+
+                flash("Product added successfully!")
+
+            db.session.commit()
+
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Product management failed.")
+            flash("Could not save product. Please try again.")
+
+        return redirect(url_for("admin_products"))
+
+    products = Product.query.order_by(
+        Product.created_at.desc()
+    ).all()
+
+    body = """
+    <section class="card">
+        <h1>Manage Market Products</h1>
+
+        <h2>Add New Product</h2>
+
+        <form method="POST">
+
+            <input type="hidden" name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <label>Product Name</label>
+            <input type="text" name="name" maxlength="150" required>
+
+            <label>Description</label>
+            <textarea name="description" rows="4"></textarea>
+
+            <label>Image URL</label>
+            <input type="url" name="image_url">
+
+            <label>Fixed Price (₦)</label>
+            <input type="number" name="price"
+                   min="0.01" step="0.01" required>
+
+            <label>Daily Income (₦)</label>
+            <input type="number" name="daily_income"
+                   min="0" step="0.01" required>
+
+            <button type="submit">Add Product</button>
+
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>Existing Products</h2>
+
+        {% for product in products %}
+
+            <div class="card">
+
+                <h3>{{ product.name }}</h3>
+
+                <p>Product ID: {{ product.id }}</p>
+                <p>Price: ₦{{ product.price }}</p>
+                <p>Daily Income: ₦{{ product.daily_income }}</p>
+
+                <hr>
+
+                <h3>Edit This Product</h3>
+
+                <form method="POST">
+
+                    <input type="hidden" name="csrf_token"
+                           value="{{ csrf_token() }}">
+
+                    <input type="hidden" name="product_id"
+                           value="{{ product.id }}">
+
+                    <label>Product Name</label>
+                    <input type="text" name="name"
+                           value="{{ product.name }}"
+                           maxlength="150" required>
+
+                    <label>Description</label>
+                    <textarea name="description"
+                              rows="3">{{ product.description }}</textarea>
+
+                    <label>Image URL</label>
+                    <input type="url" name="image_url"
+                           value="{{ product.image_url }}">
+
+                    <label>Fixed Price (₦)</label>
+                    <input type="number" name="price"
+                           value="{{ product.price }}"
+                           min="0.01" step="0.01" required>
+
+                    <label>Daily Income (₦)</label>
+                    <input type="number" name="daily_income"
+                           value="{{ product.daily_income }}"
+                           min="0" step="0.01" required>
+
+                    <button type="submit">
+                        Update Product
+                    </button>
+
+                </form>
+
+            </div>
+
+        {% else %}
+
+            <p>No products have been added yet.</p>
+
+        {% endfor %}
+    </section>
+    """
+
+    return page("Manage Products", body, products=products)
 
 # ==========================================
 # LOGIN AND ADMIN PROTECTION
@@ -563,126 +757,7 @@ def admin_required(view):
 
     return wrapped
 
-# ==========================================
-# ADMIN PRODUCT MANAGEMENT
-# ==========================================
 
-@app.route("/admin/products", methods=["GET", "POST"])
-@admin_required
-def admin_products():
-
-    if request.method == "POST":
-
-        name = request.form.get("name", "").strip()
-        description = request.form.get("description", "").strip()
-        image_url = request.form.get("image_url", "").strip()
-        price_text = request.form.get("price", "").strip()
-        daily_income_text = request.form.get("daily_income", "").strip()
-
-        if not name or not price_text or not daily_income_text:
-            flash("Product name, price and daily income are required.")
-            return redirect(url_for("admin_products"))
-
-        try:
-            price = Decimal(price_text)
-            daily_income = Decimal(daily_income_text)
-
-            if (
-                not price.is_finite()
-                or not daily_income.is_finite()
-                or price <= 0
-                or daily_income < 0
-            ):
-                raise InvalidOperation
-
-        except (InvalidOperation, ValueError):
-            flash("Please enter valid product amounts.")
-            return redirect(url_for("admin_products"))
-
-        if len(name) > 150 or len(image_url) > 500:
-            flash("The product name or image URL is too long.")
-            return redirect(url_for("admin_products"))
-
-        if image_url and not image_url.startswith(("https://", "http://")):
-            flash("Please enter a valid image URL.")
-            return redirect(url_for("admin_products"))
-
-        product = Product(
-            name=name,
-            description=description,
-            image_url=image_url,
-            price=price,
-            daily_income=daily_income,
-            is_active=True
-        )
-
-        try:
-            db.session.add(product)
-            db.session.commit()
-
-            flash("Product added successfully!")
-
-        except Exception:
-            db.session.rollback()
-            app.logger.exception("Product creation failed.")
-            flash("Could not add product. Please try again.")
-
-        return redirect(url_for("admin_products"))
-
-    products = Product.query.order_by(
-        Product.created_at.desc()
-    ).all()
-
-    body = """
-    <section class="card">
-        <h1>Manage Market Products</h1>
-
-        <form method="POST">
-
-            <input type="hidden" name="csrf_token"
-                   value="{{ csrf_token() }}">
-
-            <label>Product Name</label>
-            <input type="text" name="name" maxlength="150" required>
-
-            <label>Description</label>
-            <textarea name="description" rows="4"></textarea>
-
-            <label>Image URL</label>
-            <input type="url" name="image_url">
-
-            <label>Fixed Price (₦)</label>
-            <input type="number" name="price"
-                   min="0.01" step="0.01" required>
-
-            <label>Daily Income (₦)</label>
-            <input type="number" name="daily_income"
-                   min="0" step="0.01" required>
-
-            <button type="submit">Add Product</button>
-
-        </form>
-    </section>
-
-    <section class="card">
-        <h2>Existing Products</h2>
-
-        {% for product in products %}
-            <p>
-                <strong>{{ product.name }}</strong><br>
-                Price: ₦{{ product.price }}<br>
-                Daily Income: ₦{{ product.daily_income }}<br>
-                Status:
-                {{ "Active" if product.is_active else "Inactive" }}
-            </p>
-            <hr>
-        {% else %}
-            <p>No products have been added yet.</p>
-        {% endfor %}
-    </section>
-    """
-
-    return page("Manage Products", body, products=products)
 
 # ==========================================
 # WEBSITE DESIGN - BFT RED & ORANGE THEME
