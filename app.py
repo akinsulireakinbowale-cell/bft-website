@@ -2284,7 +2284,7 @@ def market():
 
     products = Product.query.filter_by(
         is_active=True
-    ).order_by(Product.created_at.desc()).all()
+    ).order_by(Product.price.asc()).all()
 
     body = """
     <section class="card">
@@ -2324,17 +2324,6 @@ def market():
             </div>
         {% endfor %}
     </section>
-
-    <style>
-        .market-grid {
-            display: grid;
-            grid-template-columns: repeat(
-                auto-fit, minmax(220px, 1fr)
-            );
-            gap: 18px;
-        }
-    </style>
-    """
 
     return page("BFT Market", body, products=products)
 
