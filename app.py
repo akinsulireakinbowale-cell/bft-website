@@ -3962,6 +3962,56 @@ class MarketOrder(db.Model):
     )
 
 # ==========================================
+# PRODUCT EARNINGS HISTORY
+# ==========================================
+
+class ProductEarning(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        index=True
+    )
+
+    order_id = db.Column(
+        db.Integer,
+        db.ForeignKey("market_order.id"),
+        nullable=False,
+        index=True
+    )
+
+    amount = db.Column(
+        db.Numeric(12, 2),
+        nullable=False
+    )
+
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="pending",
+        index=True
+    )
+
+    reference = db.Column(
+        db.String(100),
+        nullable=False,
+        unique=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    credited_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+# ==========================================
 # MARKET PRODUCT MODEL
 # ==========================================
 
