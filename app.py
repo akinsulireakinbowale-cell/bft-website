@@ -2412,29 +2412,78 @@ def deposit_history():
 @login_required
 def withdrawal_history():
     user = get_current_user()
-    wallet = Wallet.query.filter_by(user_id=user.id).first()
-    transactions = []
 
-    if wallet:
-        transactions = WalletTransaction.query.filter_by(
-            wallet_id=wallet.id,
-            transaction_type="withdrawal"
-        ).order_by(WalletTransaction.created_at.desc()).all()
+    withdrawals = WithdrawalRequest.query.filter_by(
+        user_id=user.id
+    ).order_by(
+        WithdrawalRequest.created_at.desc()
+    ).all()
 
     body = """
     <section class="card">
         <h1>Withdrawal History</h1>
-        {% if transactions %}
-            {% for item in transactions %}
-                <p>₦{{ item.amount }} — {{ item.status }} — {{ item.created_at }}</p>
+
+        {% if withdrawals %}
+            {% for item in withdrawals %}
+                <div class="card" style="margin-bottom:15px;">
+                    <h3>₦{{ "%.2f"|format(item.amount) }}</h3>
+
+                    <p>
+                        <strong>Status:</strong>
+                        {{ item.status|capitalize }}
+                    </p>
+
+                    <p>
+                        <strong>Bank:</strong>
+                        {{ item.bank_name }}
+                    </p>
+
+                    <p>
+                        <strong>Account Name:</strong>
+                        {{ item.account_name }}
+                    </p>
+
+                    <p>
+                        <strong>Account Number:</strong>
+                        {{ item.account_number }}
+                    </p>
+
+                    <p>
+                        <strong>Requested:</strong>
+                        {{ item.created_at }}
+                    </p>
+
+                    {% if item.reviewed_at %}
+                        <p>
+                            <strong>Reviewed:</strong>
+                            {{ item.reviewed_at }}
+                        </p>
+                    {% endif %}
+
+                    {% if item.admin_note %}
+                        <p>
+                            <strong>Admin Note:</strong>
+                            {{ item.admin_note }}
+                        </p>
+                    {% endif %}
+                </div>
             {% endfor %}
         {% else %}
-            <p>No withdrawal history found.</p>
+            <p>You have not made any withdrawal requests yet.</p>
         {% endif %}
-        <a class="button" href="{{ url_for('dashboard') }}">Back to My Account</a>
+
+        <a class="button" href="{{ url_for('dashboard') }}">
+            Back to My Account
+        </a>
     </section>
     """
-    return page("Withdrawal History", body, transactions=transactions)
+
+    return page(
+        "Withdrawal History",
+        body,
+        user=user,
+        withdrawals=withdrawals,
+    )
 
 
 @app.route("/gift-code")
