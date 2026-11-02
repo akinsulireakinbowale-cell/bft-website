@@ -668,9 +668,19 @@ def admin_products():
 
                 <hr>
 
-                <h3>Edit This Product</h3>
+                <details>
+    <summary style="
+        background:#b71c1c;
+        color:white;
+        padding:12px;
+        border-radius:8px;
+        cursor:pointer;
+        font-weight:bold;
+    ">
+        ✏️ Edit Product
+    </summary>
 
-                <form method="POST">
+    <form method="POST" style="margin-top:15px;">
 
                     <input type="hidden" name="csrf_token"
                            value="{{ csrf_token() }}">
@@ -706,6 +716,7 @@ def admin_products():
                     </button>
 
                 </form>
+                </details>
 
             </div>
 
