@@ -5050,3 +5050,17 @@ with app.app_context():
             db.session.execute(text(sql))
 
     db.session.commit()
+
+    from sqlalchemy import text
+
+    product_check = db.session.execute(text("""
+        SELECT COUNT(*)
+        FROM market_order mo
+        LEFT JOIN product p ON p.id = mo.product_id
+        WHERE p.id IS NULL
+    """)).scalar()
+
+    app.logger.warning(
+        "BFT CHECK: Orders without matching Product records: %s",
+        product_check
+    )
