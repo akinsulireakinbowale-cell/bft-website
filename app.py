@@ -2495,6 +2495,33 @@ def buy_product(product_id):
 
     return redirect(url_for("market"))
 
+@app.route("/admin/orders/<int:order_id>/approve", methods=["POST"])
+@admin_required
+def approve_market_order(order_id):
+    order = MarketOrder.query.get_or_404(order_id)
+
+    if order.status != "pending":
+        flash("This order has already been reviewed.")
+        return redirect(url_for("admin_dashboard"))
+
+    now = datetime.utcnow()
+
+    order.status = "approved"
+    order.earnings_start_at = now
+    order.earnings_end_at = now + timedelta(days=90)
+    order.last_earning_at = None
+    order.earnings_paid_days = 0
+
+    try:
+        db.session.commit()
+        flash("Order approved successfully.")
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Order approval failed.")
+        flash("Could not approve this order.")
+
+    return redirect(url_for("admin_dashboard"))
+
 # ==========================================
 # ORDER PAGE
 # ==========================================
