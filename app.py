@@ -2287,20 +2287,74 @@ def market():
     ).order_by(Product.price.asc()).all()
 
     body = """
+    <style>
+        .market-header {
+            background: linear-gradient(135deg, #d62828, #f77f00);
+            color: white;
+            padding: 24px;
+            border-radius: 18px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .market-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+        }
+
+        .market-product {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+            border-top: 4px solid #d62828;
+        }
+
+        .market-product h2 {
+            color: #d62828;
+        }
+
+        .market-price {
+            color: #f07700;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .market-status {
+            display: inline-block;
+            background: #fff0e5;
+            color: #d62828;
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .market-product img {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+    </style>
+
     <section class="card">
-        <h1>BFT Market</h1>
-        <p>Explore our goods transportation packages.</p>
+        <div class="market-header">
+            <h1>BFT Market</h1>
+            <p>Explore our goods transportation packages.</p>
+        </div>
     </section>
 
     <section class="market-grid">
         {% for product in products %}
-            <div class="card">
+            <div class="market-product">
+
                 {% if product.image_url %}
                     <img
                         src="{{ product.image_url }}"
                         alt="{{ product.name }}"
-                        style="width:100%; max-height:200px;
-                               object-fit:cover; border-radius:10px;"
                     >
                 {% endif %}
 
@@ -2308,15 +2362,14 @@ def market():
 
                 <p>{{ product.description }}</p>
 
-                <h3>₦{{ product.price }}</h3>
-
-                <p>
-                    {% if product.is_active %}
-                        Available
-                    {% else %}
-                        Unavailable
-                    {% endif %}
+                <p class="market-price">
+                    ₦{{ product.price }}
                 </p>
+
+                <span class="market-status">
+                    AVAILABLE
+                </span>
+
             </div>
         {% else %}
             <div class="card">
@@ -2324,6 +2377,7 @@ def market():
             </div>
         {% endfor %}
     </section>
+    """
 
     return page("BFT Market", body, products=products)
 
