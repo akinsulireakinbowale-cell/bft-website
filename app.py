@@ -3657,6 +3657,17 @@ class Product(db.Model):
 class MarketOrder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
+    order = MarketOrder(
+user_id=user.id,
+product_id=product.id,
+product_name=product.name,
+reference=secrets.token_hex(16),
+quantity=quantity,
+unit_price=unit_price,
+total_amount=total_amount,
+status="pending"
+)
+
     user_id = db.Column(
         db.Integer,
         db.ForeignKey("user.id"),
