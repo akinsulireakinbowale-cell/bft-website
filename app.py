@@ -684,9 +684,8 @@ def admin_products():
 
     return page("Manage Products", body, products=products)
 
-
 # ==========================================
-# WEBSITE DESIGN
+# WEBSITE DESIGN - BFT RED & ORANGE THEME
 # ==========================================
 
 STYLE = """
@@ -694,16 +693,32 @@ STYLE = """
     box-sizing: border-box;
 }
 
+:root {
+    --primary-red: #b71c1c;
+    --primary-orange: #ef6c00;
+    --light-orange: #fff3e0;
+    --light-red: #ffebee;
+    --dark-text: #292321;
+    --muted-text: #806b62;
+    --page-background: #fff8f3;
+    --card-background: #ffffff;
+    --border-color: #f2d5c5;
+}
+
 body {
     margin: 0;
     padding-bottom: 90px;
-    background: #f4f7fb;
-    color: #182230;
+    background: var(--page-background);
+    color: var(--dark-text);
     font-family: Arial, sans-serif;
 }
 
 header {
-    background: #102b4e;
+    background: linear-gradient(
+        135deg,
+        var(--primary-red),
+        var(--primary-orange)
+    );
     color: white;
     padding: 16px 5%;
     display: flex;
@@ -713,10 +728,20 @@ header {
     flex-wrap: wrap;
 }
 
+header strong {
+    font-size: 23px;
+    font-weight: bold;
+}
+
 header a {
     color: white;
     text-decoration: none;
     margin-left: 12px;
+    font-weight: bold;
+}
+
+header a:hover {
+    color: #ffe0b2;
 }
 
 main {
@@ -725,11 +750,18 @@ main {
     padding: 0 16px;
 }
 
+h1,
+h2,
+h3 {
+    color: var(--primary-red);
+}
+
 .card {
-    background: white;
+    background: var(--card-background);
     padding: 22px;
     border-radius: 12px;
-    box-shadow: 0 3px 14px #0000000d;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 3px 14px #b71c1c12;
     margin-bottom: 18px;
 }
 
@@ -737,20 +769,37 @@ label {
     display: block;
     margin: 12px 0 5px;
     font-weight: bold;
+    color: var(--primary-red);
 }
 
-input {
+input,
+select,
+textarea {
     width: 100%;
     padding: 11px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #e6bda7;
     border-radius: 7px;
     font-size: 16px;
+    background: white;
+    color: var(--dark-text);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 3px #ef6c0020;
 }
 
 button,
 .button {
     display: inline-block;
-    background: #1769aa;
+    background: linear-gradient(
+        135deg,
+        var(--primary-red),
+        var(--primary-orange)
+    );
     color: white;
     border: 0;
     border-radius: 7px;
@@ -758,48 +807,66 @@ button,
     text-decoration: none;
     cursor: pointer;
     font-size: 14px;
+    font-weight: bold;
+}
+
+button:hover,
+.button:hover {
+    opacity: 0.9;
 }
 
 .danger {
-    background: #b42318;
+    background: var(--primary-red);
+    color: white;
 }
 
 .success {
-    background: #16803c;
+    background: #218838;
+    color: white;
 }
 
 .muted {
-    color: #64748b;
+    color: var(--muted-text);
 }
 
 .notice {
     padding: 11px;
     border-radius: 7px;
-    background: #eaf2ff;
+    background: var(--light-orange);
+    color: #8a3900;
+    border-left: 4px solid var(--primary-orange);
     margin: 10px 0;
 }
 
 .notice.error {
-    background: #ffe8e6;
+    background: var(--light-red);
     color: #8c1d18;
+    border-left-color: var(--primary-red);
 }
 
 .notice.success {
     background: #e6f7ed;
     color: #17643a;
+    border-left-color: #16803c;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
+    background: white;
 }
 
 th,
 td {
     text-align: left;
     padding: 10px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border-color);
     vertical-align: top;
+}
+
+th {
+    background: var(--light-orange);
+    color: var(--primary-red);
 }
 
 .table-wrap {
@@ -827,8 +894,8 @@ td {
     justify-content: space-around;
     align-items: center;
     padding: 10px 4px;
-    box-shadow: 0 -3px 12px #00000012;
-    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -3px 12px #00000018;
+    border-top: 2px solid var(--primary-orange);
     z-index: 9999;
 }
 
@@ -836,14 +903,14 @@ td {
     flex: 1;
     text-align: center;
     text-decoration: none;
-    color: #9299a3;
+    color: #a58d82;
     font-size: 12px;
     font-weight: bold;
     padding: 5px 2px;
 }
 
 .bottom-nav a.active {
-    color: #e02020;
+    color: var(--primary-red);
 }
 
 .bottom-nav .nav-icon {
@@ -869,6 +936,7 @@ td {
     }
 }
 """
+
 
 
 def page(title, body, **context):
