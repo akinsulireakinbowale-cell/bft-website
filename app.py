@@ -2793,6 +2793,104 @@ def earnings_history():
         total_earnings=total_earnings
     )
 
+@app.route("/admin/orders/<int:order_id>/credit-earning", methods=["POST"])
+@admin_required
+def credit_order_earning(order_id):
+    order = MarketOrder.query.get_or_404(order_id)
+
+    try:
+        amount = Decimal(
+            request.form.get("amount", "0").strip()
+        )
+
+        if not amount.is_finite() or amount <= 0:
+            flash("Enter a valid verified earnings amount.")
+            return redirect(url_for("admin_dashboard"))
+
+        if order.status != "approved":
+            flash("Only approved orders can receive earnings.")
+            return redirect(url_for("admin_dashboard"))
+
+        now = datetime.utcnow()
+
+        if not order.earnings_start_at or not order.earnings_end_at:
+            flash("This order has no valid earnings period.")
+            return redirect(url_for("admin_dashboard"))
+
+        if now > order.earnings_end_at:
+            flash("This order's earnings period has ended.")
+            return redirect(url_for("admin_dashboard"))
+
+        if order.earnings_paid_days >= 90:
+            flash("This order has reached its 90-day limit.")
+            return redirect(url_for("admin_dashboard"))
+
+        last_time = order.last_earning_at or order.earnings_start_at
+
+        if now < last_time + timedelta(hours=24):
+            flash("The next 24-hour earnings period has not been reached.")
+            return redirect(url_for("admin_dashboard"))
+
+        next_day = order.earnings_paid_days + 1
+        earning_reference = f"BFT-ORDER-{order.id}-DAY-{next_day}"
+
+        existing = ProductEarning.query.filter_by(
+            reference=earning_reference
+        ).first()
+
+        if existing:
+            flash("This day's earnings have already been recorded.")
+            return redirect(url_for("admin_dashboard"))
+
+        wallet = Wallet.query.filter_by(
+            user_id=order.user_id
+        ).with_for_update().first()
+
+        if wallet is None:
+            flash("The user's wallet was not found.")
+            return redirect(url_for("admin_dashboard"))
+
+        wallet.balance = Decimal(str(wallet.balance)) + amount
+
+        earning = ProductEarning(
+            user_id=order.user_id,
+            order_id=order.id,
+            amount=amount,
+            status="credited",
+            reference=earning_reference,
+            credited_at=now
+        )
+
+        transaction = WalletTransaction(
+            wallet_id=wallet.id,
+            user_id=order.user_id,
+            transaction_type="credit",
+            amount=amount,
+            status="completed",
+            reference=secrets.token_hex(16),
+            description=f"Verified earnings for order #{order.id}, day {next_day}"
+        )
+
+        order.earnings_paid_days = next_day
+        order.last_earning_at = now
+
+        db.session.add(earning)
+        db.session.add(transaction)
+        db.session.commit()
+
+        flash("Verified earnings successfully credited.")
+
+    except (InvalidOperation, ValueError, TypeError):
+        db.session.rollback()
+        flash("Please enter a valid amount.")
+
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("BFT earnings credit failed.")
+        flash("Earnings could not be credited. Please try again.")
+
+    return redirect(url_for("admin_dashboard"))
+
 # ==========================================
 # ORDER PAGE
 # ==========================================
