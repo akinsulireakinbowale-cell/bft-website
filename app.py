@@ -2528,6 +2528,12 @@ def my_orders():
 
             <div class="card">
 
+            <p>
+    <a class="button" href="{{ url_for('my_orders') }}">
+        My Product Orders
+    </a>
+</p>
+
                 <h3>{{ order.product_name }}</h3>
 
                 <p>
