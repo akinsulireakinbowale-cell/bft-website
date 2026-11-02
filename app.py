@@ -4575,34 +4575,39 @@ def admin_dashboard():
 
         </form>
 
-          <!-- MARKET ORDER MANAGEMENT -->
+    <!-- MARKET ORDER MANAGEMENT -->
 
-        <h2>Market Order Management</h2>
+<h2>Market Order Management</h2>
 
-        <p>
-            Pending orders:
-            <strong>{{ pending_market_orders }}</strong>
-        </p>
+<p>
+    Pending orders:
+    <strong>{{ pending_market_orders }}</strong>
+</p>
 
-        {% for order in market_orders %}
-            <div class="card">
-                <h3>{{ order.product_name }}</h3>
+{% for order in market_orders %}
+    <div class="card">
+        <h3>{{ order.product_name }}</h3>
 
-                <p>Order ID: {{ order.id }}</p>
-                <p>Quantity: {{ order.quantity }}</p>
-                <p>Total: ₦{{ order.total_amount }}</p>
-                <p>Status: {{ order.status }}</p>
+        <p>Order ID: {{ order.id }}</p>
+        <p>Quantity: {{ order.quantity }}</p>
+        <p>Total: ₦{{ order.total_amount }}</p>
+        <p>Status: {{ order.status }}</p>
 
-                {% if order.earnings_start_at %}
-                    <p>
-                        Approved:
-                        {{ order.earnings_start_at }}
-                    </p>
-                    <p>
-                        Tracking ends:
-                        {{ order.earnings_end_at }}
-                    </p>
-                {% endif %}
+        {% if order.earnings_start_at %}
+            <p>
+                Activated:
+                {{ order.earnings_start_at }}
+            </p>
+
+            <p>
+                Earnings period ends:
+                {{ order.earnings_end_at }}
+            </p>
+        {% endif %}
+    </div>
+{% else %}
+    <p>No market orders yet.</p>
+{% endfor %}
 
                 {% if order.status == "pending" %}
                     <form method="POST"
