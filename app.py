@@ -4847,7 +4847,7 @@ def admin_dashboard():
         inactive_users=inactive_users,
         user_is_active=user_is_active,
         referral_statuses=referral_statuses,
-                market_orders=market_orders,
+        market_orders=market_orders,
         pending_market_orders=pending_market_orders,
     )
 
