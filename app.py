@@ -2462,15 +2462,21 @@ def buy_product(product_id):
 
         wallet.balance = balance - total_amount
 
-        order = MarketOrder(
+    now = datetime.utcnow()
+
+order = MarketOrder(
     user_id=user.id,
     product_id=product.id,
     product_name=product.name,
     quantity=quantity,
     unit_price=unit_price,
     total_amount=total_amount,
-    status="pending"
-        )
+    status="approved",
+    earnings_start_at=now,
+    earnings_end_at=now + timedelta(days=90),
+    last_earning_at=now,
+    earnings_paid_days=0
+)
 
         transaction = WalletTransaction(
             wallet_id=wallet.id,
