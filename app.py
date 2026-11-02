@@ -3671,6 +3671,12 @@ class MarketOrder(db.Model):
         index=True,
     )
 
+    product_name = db.Column(
+        db.String(150),
+        nullable=False,
+        default="",
+    )
+
     quantity = db.Column(
         db.Integer,
         nullable=False,
