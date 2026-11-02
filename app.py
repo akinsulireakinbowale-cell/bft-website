@@ -716,9 +716,10 @@ def admin_products():
                     </button>
 
                 </form>
-                </details>
+                
+           </details>
 
-            </div>
+     </div>
 
         {% else %}
 
