@@ -11,6 +11,7 @@ from datetime import timedelta, timezone
 from zoneinfo import ZoneInfo
 from flask_login import login_required
 from decimal import Decimal
+from sqlalchemy import inspect, text
 
 from flask import (
     Flask,
@@ -4773,3 +4774,17 @@ def logout():
 
 with app.app_context():
     db.create_all()
+
+    inspector = inspect(db.engine)
+
+    if "daily_income" not in [
+        column["name"] for column in inspector.get_columns("product")
+    ]:
+        db.session.execute(
+            text("""
+                ALTER TABLE product
+                ADD COLUMN daily_income NUMERIC(12, 2)
+                NOT NULL DEFAULT 0
+            """)
+        )
+        db.session.commit()
