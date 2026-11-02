@@ -5083,3 +5083,15 @@ with app.app_context():
         "BFT CHECK: Orders without matching Product records: %s",
         product_check
     )
+
+    market_product_check = db.session.execute(text("""
+        SELECT COUNT(*)
+        FROM market_order mo
+        LEFT JOIN market_product mp ON mp.id = mo.product_id
+        WHERE mp.id IS NULL
+    """)).scalar()
+
+    app.logger.warning(
+        "BFT CHECK: Orders without matching MarketProduct records: %s",
+        market_product_check
+    )
