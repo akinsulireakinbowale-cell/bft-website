@@ -4575,7 +4575,7 @@ def admin_dashboard():
 
         </form>
 
-    <!-- MARKET ORDER MANAGEMENT -->
+<!-- MARKET ORDER MANAGEMENT -->
 
 <h2>Market Order Management</h2>
 
@@ -4594,20 +4594,15 @@ def admin_dashboard():
         <p>Status: {{ order.status }}</p>
 
         {% if order.earnings_start_at %}
-            <p>
-                Activated:
-                {{ order.earnings_start_at }}
-            </p>
-
-            <p>
-                Earnings period ends:
-                {{ order.earnings_end_at }}
-            </p>
+            <p>Activated: {{ order.earnings_start_at }}</p>
+            <p>Earnings period ends: {{ order.earnings_end_at }}</p>
         {% endif %}
     </div>
 {% else %}
     <p>No market orders yet.</p>
 {% endfor %}
+
+<!-- END MARKET ORDER MANAGEMENT -->
 
 
         <!-- DEPOSIT MANAGEMENT -->
