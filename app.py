@@ -3915,6 +3915,14 @@ def admin_dashboard():
     }
 
     total_users = User.query.count()
+        # MARKET ORDER MANAGEMENT
+    market_orders = MarketOrder.query.order_by(
+        MarketOrder.created_at.desc()
+    ).all()
+
+    pending_market_orders = MarketOrder.query.filter_by(
+        status="pending"
+    ).count()
 
     all_users = User.query.all()
 
@@ -3989,6 +3997,49 @@ def admin_dashboard():
             </a>
 
         </form>
+
+          <!-- MARKET ORDER MANAGEMENT -->
+
+        <h2>Market Order Management</h2>
+
+        <p>
+            Pending orders:
+            <strong>{{ pending_market_orders }}</strong>
+        </p>
+
+        {% for order in market_orders %}
+            <div class="card">
+                <h3>{{ order.product_name }}</h3>
+
+                <p>Order ID: {{ order.id }}</p>
+                <p>Quantity: {{ order.quantity }}</p>
+                <p>Total: ₦{{ order.total_amount }}</p>
+                <p>Status: {{ order.status }}</p>
+
+                {% if order.earnings_start_at %}
+                    <p>
+                        Approved:
+                        {{ order.earnings_start_at }}
+                    </p>
+                    <p>
+                        Tracking ends:
+                        {{ order.earnings_end_at }}
+                    </p>
+                {% endif %}
+
+                {% if order.status == "pending" %}
+                    <form method="POST"
+                          action="{{ url_for('approve_market_order', order_id=order.id) }}">
+                        <input type="hidden"
+                               name="csrf_token"
+                               value="{{ csrf_token() }}">
+                        <button type="submit">Approve Order</button>
+                    </form>
+                {% endif %}
+            </div>
+        {% else %}
+            <p>No market orders yet.</p>
+        {% endfor %}      
 
 
         <!-- DEPOSIT MANAGEMENT -->
@@ -4219,6 +4270,8 @@ def admin_dashboard():
         inactive_users=inactive_users,
         user_is_active=user_is_active,
         referral_statuses=referral_statuses,
+                market_orders=market_orders,
+        pending_market_orders=pending_market_orders,
     )
 
 @app.route(
