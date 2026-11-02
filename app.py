@@ -2276,11 +2276,9 @@ def gift_code_page():
 # ==========================================
 
 @app.route("/market")
+@login_required
 def market():
     user = get_current_user()
-
-    if user is None:
-        return redirect(url_for("login"))
 
     products = Product.query.filter_by(
         is_active=True
@@ -2367,45 +2365,43 @@ def market():
                 </p>
 
                 <span class="market-status">
-    AVAILABLE
-</span>
+                    AVAILABLE
+                </span>
 
-<form
-    method="POST"
-    action="{{ url_for('buy_product', product_id=product.id) }}"
-    style="margin-top: 15px;"
->
-    <input
-        type="hidden"
-        name="csrf_token"
-        value="{{ csrf_token() }}"
-    >
+                <form
+                    method="POST"
+                    action="{{ url_for('buy_product', product_id=product.id) }}"
+                    style="margin-top: 15px;"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}"
+                    >
 
-    <label for="quantity-{{ product.id }}">
-        Quantity
-    </label>
+                    <label for="quantity-{{ product.id }}">
+                        Quantity
+                    </label>
 
-    <select
-        name="quantity"
-        id="quantity-{{ product.id }}"
-        required
-        style="width: 100%; padding: 12px; margin: 8px 0;"
-    >
-        {% for number in range(1, 6) %}
-            <option value="{{ number }}">
-                {{ number }}
-            </option>
-        {% endfor %}
-    </select>
+                    <input
+                        type="number"
+                        name="quantity"
+                        id="quantity-{{ product.id }}"
+                        min="1"
+                        step="1"
+                        value="1"
+                        required
+                        style="width: 100%; padding: 12px; margin: 8px 0;"
+                    >
 
-    <button
-        type="submit"
-        class="button"
-        style="width: 100%; background: #d62828; color: white;"
-    >
-        Buy Product
-    </button>
-</form>
+                    <button
+                        type="submit"
+                        class="button"
+                        style="width: 100%; background: #d62828; color: white;"
+                    >
+                        Buy Product
+                    </button>
+                </form>
 
             </div>
         {% else %}
@@ -2418,6 +2414,7 @@ def market():
 
     return page("BFT Market", body, products=products)
 
+
 @app.route("/market/buy/<int:product_id>", methods=["POST"])
 @login_required
 def buy_product(product_id):
@@ -2428,7 +2425,7 @@ def buy_product(product_id):
         is_active=True
     ).first()
 
-    if not product:
+    if product is None:
         flash("This product is not available.")
         return redirect(url_for("market"))
 
@@ -2451,26 +2448,13 @@ def buy_product(product_id):
             flash("Your wallet was not found.")
             return redirect(url_for("market"))
 
-        previous_quantity = db.session.query(
-            db.func.coalesce(db.func.sum(MarketOrder.quantity), 0)
-        ).filter_by(
-            user_id=user.id,
-            product_id=product.id
-        ).scalar()
-
-        remaining = 5 - int(previous_quantity or 0)
-
-        if remaining <= 0:
-            flash("You have already reached the 5-unit limit.")
-            return redirect(url_for("market"))
-
-        if quantity > remaining:
-            flash(f"You can only buy {remaining} more unit(s).")
-            return redirect(url_for("market"))
-
         unit_price = Decimal(str(product.price))
         total_amount = unit_price * quantity
         balance = Decimal(str(wallet.balance))
+
+        if total_amount <= 0:
+            flash("Invalid purchase amount.")
+            return redirect(url_for("market"))
 
         if balance < total_amount:
             flash("Insufficient wallet balance.")
@@ -2501,16 +2485,14 @@ def buy_product(product_id):
         db.session.add(transaction)
         db.session.commit()
 
-        flash("Purchase successful!")
+        flash("Purchase recorded successfully!")
 
     except Exception:
         db.session.rollback()
-        flash("Purchase could not be completed. Please try again.")
+        app.logger.exception("BFT product purchase failed.")
+        flash("Purchase could not be completed. Please contact support.")
 
     return redirect(url_for("market"))
-
-
-
 
 # ==========================================
 # ORDER PAGE
