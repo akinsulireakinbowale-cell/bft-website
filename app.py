@@ -570,22 +570,33 @@ def admin_required(view):
 @app.route("/admin/products", methods=["GET", "POST"])
 @admin_required
 def admin_products():
+
     if request.method == "POST":
+
         name = request.form.get("name", "").strip()
         description = request.form.get("description", "").strip()
         image_url = request.form.get("image_url", "").strip()
         price_text = request.form.get("price", "").strip()
+        daily_income_text = request.form.get("daily_income", "").strip()
 
-        if not name or not price_text:
-            flash("Product name and price are required.")
+        if not name or not price_text or not daily_income_text:
+            flash("Product name, price and daily income are required.")
             return redirect(url_for("admin_products"))
 
         try:
             price = Decimal(price_text)
-            if not price.is_finite() or price <= 0:
+            daily_income = Decimal(daily_income_text)
+
+            if (
+                not price.is_finite()
+                or not daily_income.is_finite()
+                or price <= 0
+                or daily_income < 0
+            ):
                 raise InvalidOperation
-        except InvalidOperation:
-            flash("Please enter a valid price greater than zero.")
+
+        except (InvalidOperation, ValueError):
+            flash("Please enter valid product amounts.")
             return redirect(url_for("admin_products"))
 
         if len(name) > 150 or len(image_url) > 500:
@@ -601,22 +612,33 @@ def admin_products():
             description=description,
             image_url=image_url,
             price=price,
+            daily_income=daily_income,
             is_active=True
         )
 
-        db.session.add(product)
-        db.session.commit()
+        try:
+            db.session.add(product)
+            db.session.commit()
 
-        flash("Product added successfully!")
+            flash("Product added successfully!")
+
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Product creation failed.")
+            flash("Could not add product. Please try again.")
+
         return redirect(url_for("admin_products"))
 
-    products = Product.query.order_by(Product.created_at.desc()).all()
+    products = Product.query.order_by(
+        Product.created_at.desc()
+    ).all()
 
     body = """
     <section class="card">
         <h1>Manage Market Products</h1>
 
         <form method="POST">
+
             <input type="hidden" name="csrf_token"
                    value="{{ csrf_token() }}">
 
@@ -633,10 +655,12 @@ def admin_products():
             <input type="number" name="price"
                    min="0.01" step="0.01" required>
 
-                   <label>Daily Income (₦)</label>
-<input type="number" name="daily_income" step="0.01" min="0" required>
+            <label>Daily Income (₦)</label>
+            <input type="number" name="daily_income"
+                   min="0" step="0.01" required>
 
             <button type="submit">Add Product</button>
+
         </form>
     </section>
 
@@ -647,7 +671,9 @@ def admin_products():
             <p>
                 <strong>{{ product.name }}</strong><br>
                 Price: ₦{{ product.price }}<br>
-                Status: {{ "Active" if product.is_active else "Inactive" }}
+                Daily Income: ₦{{ product.daily_income }}<br>
+                Status:
+                {{ "Active" if product.is_active else "Inactive" }}
             </p>
             <hr>
         {% else %}
