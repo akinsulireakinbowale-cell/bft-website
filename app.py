@@ -3718,6 +3718,27 @@ class MarketOrder(db.Model):
         default=datetime.utcnow,
     )
 
+    earnings_start_at = db.Column(
+        db.DateTime,
+        nullable=True,
+    )
+
+    earnings_end_at = db.Column(
+        db.DateTime,
+        nullable=True,
+    )
+
+    last_earning_at = db.Column(
+        db.DateTime,
+        nullable=True,
+    )
+
+    earnings_paid_days = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0,
+    )
+
 # ==========================================
 # MARKET PRODUCT MODEL
 # ==========================================
