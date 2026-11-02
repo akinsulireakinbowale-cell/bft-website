@@ -5029,10 +5029,6 @@ with app.app_context():
         )
         db.session.commit()
 
-    from sqlalchemy import inspect, text
-
-    inspector = inspect(db.engine)
-
     existing_columns = {
         column["name"]
         for column in inspector.get_columns("market_order")
@@ -5051,7 +5047,8 @@ with app.app_context():
 
     db.session.commit()
 
-        foreign_keys = db.session.execute(text("""
+    # Check the actual product foreign key
+    foreign_keys = db.session.execute(text("""
         SELECT
             tc.constraint_name,
             ccu.table_name AS referenced_table,
@@ -5069,10 +5066,12 @@ with app.app_context():
           AND kcu.column_name = 'product_id'
     """)).fetchall()
 
-    app.logger.warning("BFT PRODUCT FOREIGN KEYS: %s", foreign_keys)
+    app.logger.warning(
+        "BFT PRODUCT FOREIGN KEYS: %s",
+        foreign_keys
+    )
 
-    from sqlalchemy import text
-
+    # Check existing orders without matching products
     product_check = db.session.execute(text("""
         SELECT COUNT(*)
         FROM market_order mo
