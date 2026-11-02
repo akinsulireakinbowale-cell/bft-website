@@ -633,6 +633,9 @@ def admin_products():
             <input type="number" name="price"
                    min="0.01" step="0.01" required>
 
+                   <label>Daily Income (₦)</label>
+<input type="number" name="daily_income" step="0.01" min="0" required>
+
             <button type="submit">Add Product</button>
         </form>
     </section>
