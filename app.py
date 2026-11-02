@@ -2381,6 +2381,98 @@ def market():
 
     return page("BFT Market", body, products=products)
 
+@app.route("/market/buy/<int:product_id>", methods=["POST"])
+@login_required
+def buy_product(product_id):
+    user = get_current_user()
+
+    product = Product.query.filter_by(
+        id=product_id,
+        is_active=True
+    ).first()
+
+    if not product:
+        flash("This product is not available.")
+        return redirect(url_for("market"))
+
+    try:
+        quantity = int(request.form.get("quantity", "1"))
+
+        if quantity < 1:
+            raise ValueError
+
+    except (ValueError, TypeError):
+        flash("Please enter a valid quantity.")
+        return redirect(url_for("market"))
+
+    try:
+        wallet = Wallet.query.filter_by(
+            user_id=user.id
+        ).with_for_update().first()
+
+        if wallet is None:
+            flash("Your wallet was not found.")
+            return redirect(url_for("market"))
+
+        previous_quantity = db.session.query(
+            db.func.coalesce(db.func.sum(MarketOrder.quantity), 0)
+        ).filter_by(
+            user_id=user.id,
+            product_id=product.id
+        ).scalar()
+
+        remaining = 5 - int(previous_quantity or 0)
+
+        if remaining <= 0:
+            flash("You have already reached the 5-unit limit.")
+            return redirect(url_for("market"))
+
+        if quantity > remaining:
+            flash(f"You can only buy {remaining} more unit(s).")
+            return redirect(url_for("market"))
+
+        unit_price = Decimal(str(product.price))
+        total_amount = unit_price * quantity
+        balance = Decimal(str(wallet.balance))
+
+        if balance < total_amount:
+            flash("Insufficient wallet balance.")
+            return redirect(url_for("market"))
+
+        wallet.balance = balance - total_amount
+
+        order = MarketOrder(
+            user_id=user.id,
+            product_id=product.id,
+            quantity=quantity,
+            unit_price=unit_price,
+            total_amount=total_amount,
+            status="pending"
+        )
+
+        transaction = WalletTransaction(
+            wallet_id=wallet.id,
+            user_id=user.id,
+            transaction_type="debit",
+            amount=total_amount,
+            status="completed",
+            reference=secrets.token_hex(16),
+            description=f"Purchase of {product.name}"
+        )
+
+        db.session.add(order)
+        db.session.add(transaction)
+        db.session.commit()
+
+        flash("Purchase successful!")
+
+    except Exception:
+        db.session.rollback()
+        flash("Purchase could not be completed. Please try again.")
+
+    return redirect(url_for("market"))
+
+
 # ==========================================
 # ORDER PAGE
 # ==========================================
