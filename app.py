@@ -2463,12 +2463,13 @@ def buy_product(product_id):
         wallet.balance = balance - total_amount
 
         order = MarketOrder(
-            user_id=user.id,
-            product_id=product.id,
-            quantity=quantity,
-            unit_price=unit_price,
-            total_amount=total_amount,
-            status="pending"
+    user_id=user.id,
+    product_id=product.id,
+    product_name=product.name,
+    quantity=quantity,
+    unit_price=unit_price,
+    total_amount=total_amount,
+    status="pending"
         )
 
         transaction = WalletTransaction(
