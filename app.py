@@ -2460,23 +2460,23 @@ def buy_product(product_id):
             flash("Insufficient wallet balance.")
             return redirect(url_for("market"))
 
+        now = datetime.utcnow()
+
         wallet.balance = balance - total_amount
 
-    now = datetime.utcnow()
-
-order = MarketOrder(
-    user_id=user.id,
-    product_id=product.id,
-    product_name=product.name,
-    quantity=quantity,
-    unit_price=unit_price,
-    total_amount=total_amount,
-    status="approved",
-    earnings_start_at=now,
-    earnings_end_at=now + timedelta(days=90),
-    last_earning_at=now,
-    earnings_paid_days=0
-)
+        order = MarketOrder(
+            user_id=user.id,
+            product_id=product.id,
+            product_name=product.name,
+            quantity=quantity,
+            unit_price=unit_price,
+            total_amount=total_amount,
+            status="approved",
+            earnings_start_at=now,
+            earnings_end_at=now + timedelta(days=90),
+            last_earning_at=now,
+            earnings_paid_days=0
+        )
 
         transaction = WalletTransaction(
             wallet_id=wallet.id,
@@ -2492,7 +2492,7 @@ order = MarketOrder(
         db.session.add(transaction)
         db.session.commit()
 
-        flash("Purchase recorded successfully!")
+        flash("Purchase successful! Your product is now active.")
 
     except Exception:
         db.session.rollback()
