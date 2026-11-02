@@ -4609,20 +4609,6 @@ def admin_dashboard():
     <p>No market orders yet.</p>
 {% endfor %}
 
-                {% if order.status == "pending" %}
-                    <form method="POST"
-                          action="{{ url_for('approve_market_order', order_id=order.id) }}">
-                        <input type="hidden"
-                               name="csrf_token"
-                               value="{{ csrf_token() }}">
-                        <button type="submit">Approve Order</button>
-                    </form>
-                {% endif %}
-            </div>
-        {% else %}
-            <p>No market orders yet.</p>
-        {% endfor %}      
-
 
         <!-- DEPOSIT MANAGEMENT -->
 
