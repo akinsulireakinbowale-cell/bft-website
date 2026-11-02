@@ -1471,11 +1471,12 @@ def home():
                     Recharge
                 </a>
 
-                <div class="bft-shortcut">
-                    <span>📤</span>
-                    Withdraw
-                    <small>Available from My Account</small>
-                </div>
+                <a class="bft-shortcut"
+   href="{{ url_for('request_withdrawal') }}">
+    <span>📤</span>
+    Withdraw
+    <small>Request a withdrawal</small>
+</a>
 
                 <a class="bft-shortcut"
                    href="{{ url_for('team') }}">
