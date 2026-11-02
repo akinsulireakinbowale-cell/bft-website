@@ -2282,15 +2282,61 @@ def market():
     if user is None:
         return redirect(url_for("login"))
 
+    products = Product.query.filter_by(
+        is_active=True
+    ).order_by(Product.created_at.desc()).all()
+
     body = """
     <section class="card">
         <h1>BFT Market</h1>
-        <p>Welcome to the BFT Market.</p>
-        <p>Products will appear here soon.</p>
+        <p>Explore our goods transportation packages.</p>
     </section>
+
+    <section class="market-grid">
+        {% for product in products %}
+            <div class="card">
+                {% if product.image_url %}
+                    <img
+                        src="{{ product.image_url }}"
+                        alt="{{ product.name }}"
+                        style="width:100%; max-height:200px;
+                               object-fit:cover; border-radius:10px;"
+                    >
+                {% endif %}
+
+                <h2>{{ product.name }}</h2>
+
+                <p>{{ product.description }}</p>
+
+                <h3>₦{{ product.price }}</h3>
+
+                <p>
+                    {% if product.is_active %}
+                        Available
+                    {% else %}
+                        Unavailable
+                    {% endif %}
+                </p>
+            </div>
+        {% else %}
+            <div class="card">
+                <p>No products are currently available.</p>
+            </div>
+        {% endfor %}
+    </section>
+
+    <style>
+        .market-grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit, minmax(220px, 1fr)
+            );
+            gap: 18px;
+        }
+    </style>
     """
 
-    return page("Market", body)
+    return page("BFT Market", body, products=products)
 
 # ==========================================
 # ORDER PAGE
