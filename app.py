@@ -2889,17 +2889,17 @@ def market():
         {% endfor %}
     </section>
     """
-
     return page("BFT Market", body, products=products)
 
 @app.route("/market/buy/<int:product_id>", methods=["POST"])
+@login_required
 def buy_product(product_id):
-user = get_current_user()
+    user = get_current_user()
 
-product = Product.query.filter_by(
-    id=product_id,
-    is_active=True
-).first()
+    product = Product.query.filter_by(
+        id=product_id,
+        is_active=True
+    ).first()
 
 if product is None:
     flash("This product is not available.")
