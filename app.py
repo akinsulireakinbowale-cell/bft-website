@@ -2942,11 +2942,9 @@ try:
 
     now = datetime.utcnow()
 
-    # Deduct the purchase amount.
     wallet.balance = balance - total_amount
     wallet.updated_at = now
 
-    # Create the order.
     order = MarketOrder(
         user_id=user.id,
         product_id=product.id,
@@ -2964,7 +2962,6 @@ try:
     db.session.add(order)
     db.session.flush()
 
-    # Record the wallet debit.
     transaction = WalletTransaction(
         wallet_id=wallet.id,
         user_id=user.id,
@@ -2977,10 +2974,8 @@ try:
 
     db.session.add(transaction)
 
-    # Award referral commissions for this purchase.
     award_referral_commissions(order)
 
-    # Save the order, debit and commissions together.
     db.session.commit()
 
     flash("Purchase successful! Your product is now active.")
