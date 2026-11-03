@@ -4800,6 +4800,10 @@ class MarketOrder(db.Model):
         default=0,
     )
 
+# ==========================================
+# REFERRAL COMMISSION MODEL
+# ==========================================
+
 class ReferralCommission(db.Model):
     __tablename__ = "referral_commissions"
 
