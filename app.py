@@ -5898,6 +5898,82 @@ def admin_enable_referral_code(user_id):
     flash("Referral code enabled successfully.")
     return redirect(url_for("admin_dashboard"))
 
+@app.route("/admin/referral-bonus-management")
+@admin_required
+def admin_referral_bonus_management():
+    users = User.query.order_by(User.id.desc()).all()
+
+    referral_statuses = {
+        status.user_id: status
+        for status in ReferralCodeStatus.query.all()
+    }
+
+    return page(
+        "Referral Bonus Management",
+        """
+        <h2>🎁 Referral Bonus Management</h2>
+
+        <p>Manage referral codes for registered users.</p>
+
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Referral Code</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for member in users %}
+                    <tr>
+                        <td>{{ member.full_name }}</td>
+                        <td>{{ member.email }}</td>
+                        <td>{{ member.referral_code or "None" }}</td>
+
+                        <td>
+                            {% set status = referral_statuses.get(member.id) %}
+
+                            {% if status and status.is_active %}
+                                <span style="color:green;">Active</span>
+                            {% elif status and not status.is_active %}
+                                <span style="color:red;">Disabled</span>
+                            {% else %}
+                                <span>Not configured</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('admin_enable_referral_code', user_id=member.id) }}">
+                                <button type="submit">
+                                    Enable
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5">No users found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <br>
+
+        <a href="{{ url_for('admin_dashboard') }}">
+            ← Back to Admin Dashboard
+        </a>
+        """,
+        users=users,
+        referral_statuses=referral_statuses,
+    )
+
 @app.route("/admin/gift-codes", methods=["GET", "POST"])
 @admin_required
 def admin_gift_codes():
