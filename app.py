@@ -71,11 +71,6 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=1800,
 )
 
-REFERRAL_COMMISSION_RATES = {
-    1: Decimal("0.10"),  # Level 1 — 10%
-    2: Decimal("0.03"),  # Level 2 — 3%
-    3: Decimal("0.01"),  # Level 3 — 1%
-}
 def calculate_referral_commission(order_amount, level):
     rate = REFERRAL_COMMISSION_RATES.get(level)
 
@@ -124,21 +119,26 @@ limiter = Limiter(
     ),
 )
 
-def award_referral_commissions(order):
-    """
-    Credit up to three referral levels for one approved product order.
-    Must run before the order's database transaction is committed.
-    """
 
+REFERRAL_COMMISSION_RATES = {
+    1: Decimal("0.10"),  # Level 1: 10%
+    2: Decimal("0.03"),  # Level 2: 3%
+    3: Decimal("0.01"),  # Level 3: 1%
+}
+
+
+def award_referral_commissions(order):
     buyer = db.session.get(User, order.user_id)
 
-    if buyer is None or not buyer.referred_by:
+    if buyer is None:
         return
 
     referral_code = buyer.referred_by
-    visited_user_ids = {buyer.id}
+    visited_users = {buyer.id}
 
-    for level in (1, 2, 3):
+    for level in range(1, 4):
+        if not referral_code:
+            break
 
         referrer = User.query.filter_by(
             referral_code=referral_code
@@ -147,21 +147,21 @@ def award_referral_commissions(order):
         if referrer is None:
             break
 
-        # Prevent self-referrals and referral loops.
-        if referrer.id in visited_user_ids:
+        if referrer.id in visited_users:
             break
 
-        visited_user_ids.add(referrer.id)
+        visited_users.add(referrer.id)
 
-        # Do not pay an inactive referral account.
+        # Check whether this referral code is active.
         referral_status = ReferralCodeStatus.query.filter_by(
             user_id=referrer.id
         ).first()
 
-        if referral_status and not referral_status.is_active:
-            break
+        if referral_status is not None and not referral_status.is_active:
+            referral_code = referrer.referred_by
+            continue
 
-        # Prevent duplicate commission for this order and level.
+        # Prevent duplicate commissions.
         existing = ReferralCommission.query.filter_by(
             order_id=order.id,
             level=level
@@ -169,76 +169,66 @@ def award_referral_commissions(order):
 
         if existing:
             referral_code = referrer.referred_by
-            if not referral_code:
-                break
             continue
 
-        commission_amount = calculate_referral_commission(
+        rate = REFERRAL_COMMISSION_RATES[level]
+
+        commission = calculate_referral_commission(
             order.total_amount,
             level
         )
 
-        if commission_amount <= Decimal("0.00"):
-            break
+        if commission <= 0:
+            referral_code = referrer.referred_by
+            continue
 
-        referrer_wallet = Wallet.query.filter_by(
+        wallet = Wallet.query.filter_by(
             user_id=referrer.id
         ).with_for_update().first()
 
-        if referrer_wallet is None:
-            referrer_wallet = Wallet(
-                user_id=referrer.id,
-                balance=Decimal("0.00")
+        if wallet is None:
+            raise ValueError(
+                f"Wallet not found for referrer {referrer.id}"
             )
-            db.session.add(referrer_wallet)
-            db.session.flush()
 
-        reference = (
-            f"BFT-REF-{order.id}-L{level}-{secrets.token_hex(6)}"
+        wallet.balance = (
+            Decimal(str(wallet.balance)) + commission
         )
+        wallet.updated_at = datetime.utcnow()
 
-        commission = ReferralCommission(
+        record = ReferralCommission(
             order_id=order.id,
             user_id=referrer.id,
             buyer_user_id=buyer.id,
             level=level,
-            rate=REFERRAL_COMMISSION_RATES[level],
-            base_amount=Decimal(str(order.total_amount)),
-            amount=commission_amount,
+            rate=rate,
+            base_amount=order.total_amount,
+            amount=commission,
             status="completed",
-            reference=reference,
+            reference=(
+                f"BFT-REF-{order.id}-{level}-{secrets.token_hex(6)}"
+            ),
             credited_at=datetime.utcnow()
         )
 
-        referrer_wallet.balance = (
-            Decimal(str(referrer_wallet.balance))
-            + commission_amount
-        )
+        db.session.add(record)
 
-        if hasattr(referrer_wallet, "updated_at"):
-            referrer_wallet.updated_at = datetime.utcnow()
-
-        transaction = WalletTransaction(
-            wallet_id=referrer_wallet.id,
+        wallet_transaction = WalletTransaction(
+            wallet_id=wallet.id,
             user_id=referrer.id,
             transaction_type="referral",
-            amount=commission_amount,
+            amount=commission,
             status="completed",
-            reference=reference,
+            reference=record.reference,
             description=(
                 f"Level {level} referral commission "
                 f"for order #{order.id}"
             )
         )
 
-        db.session.add(commission)
-        db.session.add(transaction)
+        db.session.add(wallet_transaction)
 
-        # Move to the next referral level.
         referral_code = referrer.referred_by
-
-        if not referral_code:
-            break
 
 # ==========================================
 # DATABASE MODELS
