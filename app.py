@@ -2979,12 +2979,12 @@ try:
 
     flash("Purchase successful! Your product is now active.")
 
-except Exception:
-    db.session.rollback()
-    app.logger.exception("BFT product purchase failed.")
-    flash("Purchase could not be completed. Please contact support.")
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("BFT product purchase failed.")
+        flash("Purchase could not be completed. Please contact support.")
 
-return redirect(url_for("market"))
+    return redirect(url_for("market"))
 
 # ==========================================
 # CLAIM DAILY PRODUCT EARNINGS
