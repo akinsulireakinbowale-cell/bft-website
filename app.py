@@ -5136,7 +5136,13 @@ def admin_buy_product_for_user():
                 earnings_paid_days=0
             )
 
-            db.session.add(order)
+            db.session.add(transaction)
+
+# Credit eligible referral commissions.
+award_referral_commissions(order)
+
+# Save the purchase, debit and commissions together.
+db.session.commit()
             db.session.flush()
 
             # Record the wallet debit.
