@@ -2272,7 +2272,7 @@ def dashboard():
         </a>
 
         <a class="my-action"
-           href="{{ url_for('order') }}">
+           href="{{ url_for('orders') }}">
             <div class="my-icon">▤</div>
             My Order
         </a>
