@@ -5297,7 +5297,7 @@ def admin_buy_product_for_user():
             wallet.balance = balance - total_amount
             wallet.updated_at = now
 
-            # Create the product order.
+                        # Create the product order.
             order = MarketOrder(
                 user_id=member.id,
                 product_id=product.id,
@@ -5312,8 +5312,52 @@ def admin_buy_product_for_user():
                 earnings_paid_days=0
             )
 
-                    try:
-            # Your purchase code goes here.
+            db.session.add(order)
+            db.session.flush()
+
+            # Record the wallet debit.
+            transaction = WalletTransaction(
+                wallet_id=wallet.id,
+                user_id=member.id,
+                transaction_type="debit",
+                amount=total_amount,
+                status="completed",
+                reference=f"BFT-ADMIN-PURCHASE-{order.id}-{secrets.token_hex(8)}",
+                description=(
+                    f"Admin purchase: {product.name}, "
+                    f"quantity {quantity}"
+                )
+            )
+
+            db.session.add(transaction)
+
+            # Award referral commissions.
+            award_referral_commissions(order)
+
+            # Save everything together.
+            db.session.commit()
+
+            flash(
+                f"Successfully purchased {product.name} "
+                f"for {member.full_name}. "
+                f"Amount: ₦{total_amount:,.2f}",
+                "success"
+            )
+
+            return redirect(url_for("admin_buy_product_for_user"))
+
+        except Exception:
+            db.session.rollback()
+            app.logger.exception(
+                "Admin buy product for user failed."
+            )
+
+            flash(
+                "Purchase failed. No successful order was saved.",
+                "error"
+            )
+
+            return redirect(url_for("admin_buy_product_for_user"))
 
             db.session.add(transaction)
             award_referral_commissions(order)
