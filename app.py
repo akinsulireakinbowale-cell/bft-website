@@ -4828,6 +4828,196 @@ def edit_profile():
     """
 
     return page("Edit Profile", body, user=user)
+
+# ==========================================
+# ADMIN MANUAL WALLET FUNDING
+# ==========================================
+
+@app.route("/admin/manual-wallet-funding", methods=["GET", "POST"])
+@admin_required
+def admin_manual_funding():
+
+    if request.method == "POST":
+        user_id_text = request.form.get("user_id", "").strip()
+        amount_text = request.form.get("amount", "").strip()
+        note = request.form.get("note", "").strip()
+        funding_reference = request.form.get(
+            "funding_reference", ""
+        ).strip()
+
+        if not user_id_text.isdigit():
+            flash("Please enter a valid user ID.", "error")
+            return redirect(url_for("admin_manual_funding"))
+
+        try:
+            amount = Decimal(amount_text)
+        except (InvalidOperation, ValueError):
+            flash("Please enter a valid amount.", "error")
+            return redirect(url_for("admin_manual_funding"))
+
+        if (
+            not amount.is_finite()
+            or amount <= Decimal("0.00")
+            or amount > Decimal("1000000.00")
+            or amount.as_tuple().exponent < -2
+        ):
+            flash("Enter an amount between ₦0.01 and ₦1,000,000.00, with no more than 2 decimal places.", "error")
+            return redirect(url_for("admin_manual_funding"))
+
+        if not funding_reference or len(funding_reference) > 100:
+            flash("Invalid funding reference. Please try again.", "error")
+            return redirect(url_for("admin_manual_funding"))
+
+        try:
+            # Prevent the same form submission from crediting twice.
+            existing = WalletTransaction.query.filter_by(
+                reference=funding_reference
+            ).first()
+
+            if existing:
+                flash("This funding request has already been processed.", "error")
+                return redirect(url_for("admin_manual_funding"))
+
+            member = db.session.get(User, int(user_id_text))
+
+            if member is None:
+                flash("User not found.", "error")
+                return redirect(url_for("admin_manual_funding"))
+
+            wallet = Wallet.query.filter_by(
+                user_id=member.id
+            ).with_for_update().first()
+
+            if wallet is None:
+                wallet = Wallet(
+                    user_id=member.id,
+                    balance=Decimal("0.00"),
+                    currency="NGN",
+                )
+                db.session.add(wallet)
+                db.session.flush()
+
+            # Check the reference again before crediting.
+            existing = WalletTransaction.query.filter_by(
+                reference=funding_reference
+            ).first()
+
+            if existing:
+                raise ValueError("This funding reference has already been used.")
+
+            wallet.balance = (
+                Decimal(str(wallet.balance or "0.00")) + amount
+            )
+            wallet.updated_at = datetime.utcnow()
+
+            transaction = WalletTransaction(
+                wallet_id=wallet.id,
+                user_id=member.id,
+                transaction_type="manual_funding",
+                amount=amount,
+                status="completed",
+                reference=funding_reference,
+                description=(
+                    f"Manual wallet funding by administrator. "
+                    f"Note: {note[:180] or 'No note provided'}"
+                ),
+            )
+
+            db.session.add(transaction)
+            db.session.commit()
+
+            flash(
+                f"Successfully credited ₦{amount:,.2f} "
+                f"to {member.full_name}'s wallet.",
+                "success",
+            )
+
+            return redirect(url_for("admin_manual_funding"))
+
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Manual wallet funding failed.")
+            flash(
+                "Funding failed. No successful credit was recorded. Please check the transaction records.",
+                "error",
+            )
+
+            return redirect(url_for("admin_manual_funding"))
+
+    funding_reference = (
+        "MANUAL-" + secrets.token_hex(16).upper()
+    )
+
+    body = """
+    <section class="card">
+        <h1>💰 Manual Wallet Funding</h1>
+
+        <p>Credit a registered user's BFT wallet.</p>
+
+        <form method="POST">
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <input
+                type="hidden"
+                name="funding_reference"
+                value="{{ funding_reference }}"
+            >
+
+            <label for="user_id">User ID</label>
+            <input
+                type="number"
+                id="user_id"
+                name="user_id"
+                min="1"
+                required
+                placeholder="Enter registered user ID"
+            >
+
+            <label for="amount">Amount (₦)</label>
+            <input
+                type="number"
+                id="amount"
+                name="amount"
+                min="0.01"
+                max="1000000"
+                step="0.01"
+                required
+                placeholder="Enter amount"
+            >
+
+            <label for="note">Funding Note (Optional)</label>
+            <textarea
+                id="note"
+                name="note"
+                maxlength="180"
+                placeholder="Reason for funding"
+            ></textarea>
+
+            <button type="submit"
+                onclick="return confirm('Confirm this wallet credit?');">
+                Credit Wallet
+            </button>
+
+        </form>
+
+        <p>
+            <a href="{{ url_for('admin_dashboard') }}">
+                Return to Admin Dashboard
+            </a>
+        </p>
+    </section>
+    """
+
+    return page(
+        "Manual Wallet Funding",
+        body,
+        funding_reference=funding_reference,
+            )
     
 # ==========================================
 # ADMINISTRATOR DASHBOARD
@@ -4898,6 +5088,7 @@ def admin_dashboard():
                 margin-top: 6px;
                 font-weight: 400;
             }
+
         </style>
 
         <h2>Admin Sections</h2>
@@ -4907,7 +5098,7 @@ def admin_dashboard():
             <a href="{{ url_for('admin_deposits') }}">📥 Pending Deposits<small>Review deposit requests</small></a>
             <a href="{{ url_for('admin_withdrawals') }}">📤 Pending Withdrawals<small>Review withdrawal requests</small></a>
             <a href="#manage-users">👥 Manage Users<small>Search and manage registered users</small></a>
-            <span class="coming-soon">💰 Manual Wallet Funding<small>To be connected in the next step</small></span>
+            <a href="{{ url_for('admin_manual_funding') }}">💰 Manual Wallet Funding<small>Credit a registered user's wallet</small></a>
             <span class="coming-soon">🛍️ Buy Product for User<small>To be connected in the next step</small></span>
             <span class="coming-soon">🎁 Referral Bonus Management<small>To be connected in the next step</small></span>
             <a href="{{ url_for('admin_gift_codes') }}">🎟️ Gift Code Management<small>Create and manage gift codes</small></a>
