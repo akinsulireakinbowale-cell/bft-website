@@ -2369,12 +2369,6 @@ def dashboard():
             My Order
         </a>
 
-        <a class="button" 
-           href="{{ url_for('admin_market_orders') }}">
-            <div class="my-icon">▣</div>
-            📦 Market Orders
-        </a>
-
         <a class="my-action"
            href="{{ url_for('card_bank') }}">
             <div class="my-icon">▣</div>
