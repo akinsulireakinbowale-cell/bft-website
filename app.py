@@ -2866,7 +2866,7 @@ def market():
                         name="quantity"
                         id="quantity-{{ product.id }}"
                         min="1"
-                        step="1"
+                     step="1"
                         value="1"
                         required
                         style="width: 100%; padding: 12px; margin: 8px 0;"
@@ -2891,15 +2891,15 @@ def market():
     """
     return page("BFT Market", body, products=products)
 
-@app.route("/market/buy/<int:product_id>", methods=["POST"])
+@app.route("/market/buy/"int:product_id" (int:product_id)", methods=["POST"])
 @login_required
 def buy_product(product_id):
-    user = get_current_user()
+user = get_current_user()
 
-    product = Product.query.filter_by(
-        id=product_id,
-        is_active=True
-    ).first()
+product = Product.query.filter_by(
+    id=product_id,
+    is_active=True
+).first()
 
 if product is None:
     flash("This product is not available.")
@@ -2941,9 +2941,11 @@ try:
 
     now = datetime.utcnow()
 
+    # Deduct the buyer's wallet.
     wallet.balance = balance - total_amount
     wallet.updated_at = now
 
+    # Create the order.
     order = MarketOrder(
         user_id=user.id,
         product_id=product.id,
@@ -2961,6 +2963,7 @@ try:
     db.session.add(order)
     db.session.flush()
 
+    # Record the wallet debit.
     transaction = WalletTransaction(
         wallet_id=wallet.id,
         user_id=user.id,
@@ -2973,18 +2976,20 @@ try:
 
     db.session.add(transaction)
 
+    # Calculate and award referral commissions.
     award_referral_commissions(order)
 
+    # Save everything together.
     db.session.commit()
 
     flash("Purchase successful! Your product is now active.")
 
-    except Exception:
-        db.session.rollback()
-        app.logger.exception("BFT product purchase failed.")
-        flash("Purchase could not be completed. Please contact support.")
+except Exception:
+    db.session.rollback()
+    app.logger.exception("BFT product purchase failed.")
+    flash("Purchase could not be completed. Please contact support.")
 
-    return redirect(url_for("market"))
+return redirect(url_for("market"))
 
 # ==========================================
 # CLAIM DAILY PRODUCT EARNINGS
