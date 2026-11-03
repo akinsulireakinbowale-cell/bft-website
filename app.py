@@ -4800,69 +4800,119 @@ class MarketOrder(db.Model):
         default=0,
     )
 
-# ==========================================
-# REFERRAL COMMISSION MODEL
-# ==========================================
+def award_referral_commissions(order):
+    if order.status not in ("approved", "completed"):
+        return
 
-class ReferralCommission(db.Model):
-    __tablename__ = "referral_commissions"
+    buyer = db.session.get(User, order.user_id)
 
-    id = db.Column(db.Integer, primary_key=True)
+    if buyer is None:
+        return
 
-    order_id = db.Column(
-        db.Integer,
-        db.ForeignKey("market_order.id"),
-        nullable=False
-    )
+    referral_code = buyer.referred_by
+    visited_users = {buyer.id}
 
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("user.id"),
-        nullable=False,
-        index=True
-    )
+    for level in range(1, 4):
+        if not referral_code:
+            break
 
-    buyer_user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("user.id"),
-        nullable=False
-    )
+        referrer = User.query.filter_by(
+            referral_code=referral_code
+        ).first()
 
-    level = db.Column(db.Integer, nullable=False)
-    rate = db.Column(db.Numeric(6, 4), nullable=False)
-    base_amount = db.Column(db.Numeric(12, 2), nullable=False)
-    amount = db.Column(db.Numeric(12, 2), nullable=False)
+        if referrer is None:
+            break
 
-    status = db.Column(
-        db.String(20),
-        nullable=False,
-        default="completed"
-    )
+        if referrer.id in visited_users:
+            break
 
-    reference = db.Column(
-        db.String(100),
-        nullable=False,
-        unique=True
-    )
+        visited_users.add(referrer.id)
 
-    created_at = db.Column(
-        db.DateTime,
-        nullable=False,
-        default=datetime.utcnow
-    )
+        # Check referral-code status.
+        referral_status = ReferralCodeStatus.query.filter_by(
+            user_id=referrer.id
+        ).first()
 
-    credited_at = db.Column(
-        db.DateTime,
-        nullable=True
-    )
+        if referral_status is not None and not referral_status.is_active:
+            referral_code = referrer.referred_by
+            continue
 
-    __table_args__ = (
-        db.UniqueConstraint(
-            "order_id",
-            "level",
-            name="uq_referral_commission_order_level"
-        ),
-    )
+        # Prevent duplicate commission records.
+        existing = ReferralCommission.query.filter_by(
+            order_id=order.id,
+            level=level
+        ).first()
+
+        if existing:
+            referral_code = referrer.referred_by
+            continue
+
+        rate = REFERRAL_COMMISSION_RATES[level]
+
+        commission = calculate_referral_commission(
+            order.total_amount,
+            level
+        )
+
+        if commission <= 0:
+            referral_code = referrer.referred_by
+            continue
+
+        # Find and lock the referrer's wallet.
+        wallet = Wallet.query.filter_by(
+            user_id=referrer.id
+        ).with_for_update().first()
+
+        if wallet is None:
+            raise ValueError(
+                f"Wallet not found for referrer {referrer.id}"
+            )
+
+        now = datetime.utcnow()
+
+        # Credit the wallet.
+        wallet.balance = (
+            Decimal(str(wallet.balance)) + commission
+        )
+        wallet.updated_at = now
+
+        # Save commission record using your actual model fields.
+        record = ReferralCommission(
+            order_id=order.id,
+            user_id=referrer.id,
+            buyer_user_id=buyer.id,
+            level=level,
+            rate=rate,
+            base_amount=order.total_amount,
+            amount=commission,
+            status="completed",
+            reference=(
+                f"BFT-REF-{order.id}-{level}-{secrets.token_hex(6)}"
+            ),
+            credited_at=now
+        )
+
+        db.session.add(record)
+        db.session.flush()
+
+        # Record the wallet credit.
+        wallet_transaction = WalletTransaction(
+            wallet_id=wallet.id,
+            user_id=referrer.id,
+            transaction_type="referral",
+            amount=commission,
+            status="completed",
+            reference=record.reference,
+            description=(
+                f"Level {level} referral commission "
+                f"for order #{order.id}"
+            )
+        )
+
+        db.session.add(wallet_transaction)
+
+        # Continue to the next referral level.
+        referral_code = referrer.referred_by
 
 # ==========================================
 # PRODUCT EARNINGS HISTORY
