@@ -71,6 +71,24 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=1800,
 )
 
+REFERRAL_COMMISSION_RATES = {
+    1: Decimal("0.10"),  # Level 1 — 10%
+    2: Decimal("0.03"),  # Level 2 — 3%
+    3: Decimal("0.01"),  # Level 3 — 1%
+}
+def calculate_referral_commission(order_amount, level):
+    rate = REFERRAL_COMMISSION_RATES.get(level)
+
+    if rate is None:
+        return Decimal("0.00")
+
+    amount = Decimal(str(order_amount)) * rate
+
+    return amount.quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP
+    )
+
 database_url = os.environ.get(
     "DATABASE_URL",
     "sqlite:///bft.db",
