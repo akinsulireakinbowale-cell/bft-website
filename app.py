@@ -1525,10 +1525,12 @@ def home():
                         </a>
 
                         <a class="bft-telegram-group"
-                           href="javascript:void(0)">
-                            ✈ Telegram Group<br>
-                            Coming Soon
-                        </a>
+                           href="https://t.me/+ieXq1ePHUSBhZTc0"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="telegram-btn">
+                            Join Telegram
+                       </a>
 
                     </div>
 
