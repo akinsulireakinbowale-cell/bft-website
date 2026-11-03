@@ -5312,14 +5312,21 @@ def admin_buy_product_for_user():
                 earnings_paid_days=0
             )
 
+                    try:
+            # Your purchase code goes here.
+
             db.session.add(transaction)
+            award_referral_commissions(order)
+            db.session.commit()
 
-# Credit eligible referral commissions.
-award_referral_commissions(order)
+            flash("Purchase completed successfully.", "success")
+            return redirect(url_for("admin_buy_product_for_user"))
 
-# Save the purchase, debit and commissions together.
-db.session.commit()
-            db.session.flush()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Admin purchase failed.")
+            flash("Purchase failed.", "error")
+            return redirect(url_for("admin_buy_product_for_user"))
 
             # Record the wallet debit.
             transaction = WalletTransaction(
