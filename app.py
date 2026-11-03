@@ -2892,8 +2892,7 @@ def market():
 
     return page("BFT Market", body, products=products)
 
-@app.route("/market/buy/"int:product_id" (int:product_id)", methods=["POST"])
-@login_required
+@app.route("/market/buy/<int:product_id>", methods=["POST"])
 def buy_product(product_id):
 user = get_current_user()
 
