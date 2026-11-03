@@ -2892,92 +2892,105 @@ def market():
 
     return page("BFT Market", body, products=products)
 
-
-@app.route("/market/buy/<int:product_id>", methods=["POST"])
+@app.route("/market/buy/"int:product_id" (int:product_id)", methods=["POST"])
 @login_required
 def buy_product(product_id):
-    user = get_current_user()
+user = get_current_user()
 
-    product = Product.query.filter_by(
-        id=product_id,
-        is_active=True
-    ).first()
+product = Product.query.filter_by(
+    id=product_id,
+    is_active=True
+).first()
 
-    if product is None:
-        flash("This product is not available.")
-        return redirect(url_for("market"))
-
-    try:
-        quantity = int(request.form.get("quantity", "1"))
-
-        if quantity < 1:
-            raise ValueError
-
-    except (ValueError, TypeError):
-        flash("Please enter a valid quantity.")
-        return redirect(url_for("market"))
-
-    try:
-        wallet = Wallet.query.filter_by(
-            user_id=user.id
-        ).with_for_update().first()
-
-        if wallet is None:
-            flash("Your wallet was not found.")
-            return redirect(url_for("market"))
-
-        unit_price = Decimal(str(product.price))
-        total_amount = unit_price * quantity
-        balance = Decimal(str(wallet.balance))
-
-        if total_amount <= 0:
-            flash("Invalid purchase amount.")
-            return redirect(url_for("market"))
-
-        if balance < total_amount:
-            flash("Insufficient wallet balance.")
-            return redirect(url_for("market"))
-
-        now = datetime.utcnow()
-
-        wallet.balance = balance - total_amount
-
-        order = MarketOrder(
-            user_id=user.id,
-            product_id=product.id,
-            product_name=product.name,
-            quantity=quantity,
-            unit_price=unit_price,
-            total_amount=total_amount,
-            status="approved",
-            earnings_start_at=now,
-            earnings_end_at=now + timedelta(days=90),
-            last_earning_at=now,
-            earnings_paid_days=0
-        )
-
-        transaction = WalletTransaction(
-            wallet_id=wallet.id,
-            user_id=user.id,
-            transaction_type="debit",
-            amount=total_amount,
-            status="completed",
-            reference=secrets.token_hex(16),
-            description=f"Purchase of {product.name}"
-        )
-
-        db.session.add(order)
-        db.session.add(transaction)
-        db.session.commit()
-
-        flash("Purchase successful! Your product is now active.")
-
-    except Exception:
-        db.session.rollback()
-        app.logger.exception("BFT product purchase failed.")
-        flash("Purchase could not be completed. Please contact support.")
-
+if product is None:
+    flash("This product is not available.")
     return redirect(url_for("market"))
+
+try:
+    quantity = int(request.form.get("quantity", "1"))
+
+    if quantity < 1 or quantity > 100:
+        raise ValueError
+
+except (ValueError, TypeError):
+    flash("Please enter a valid quantity between 1 and 100.")
+    return redirect(url_for("market"))
+
+try:
+    wallet = Wallet.query.filter_by(
+        user_id=user.id
+    ).with_for_update().first()
+
+    if wallet is None:
+        flash("Your wallet was not found.")
+        return redirect(url_for("market"))
+
+    unit_price = Decimal(str(product.price))
+    total_amount = unit_price * quantity
+    balance = Decimal(str(wallet.balance))
+
+    if (
+        not total_amount.is_finite()
+        or total_amount <= 0
+    ):
+        flash("Invalid purchase amount.")
+        return redirect(url_for("market"))
+
+    if balance < total_amount:
+        flash("Insufficient wallet balance.")
+        return redirect(url_for("market"))
+
+    now = datetime.utcnow()
+
+    # Deduct the purchase amount.
+    wallet.balance = balance - total_amount
+    wallet.updated_at = now
+
+    # Create the order.
+    order = MarketOrder(
+        user_id=user.id,
+        product_id=product.id,
+        product_name=product.name,
+        quantity=quantity,
+        unit_price=unit_price,
+        total_amount=total_amount,
+        status="approved",
+        earnings_start_at=now,
+        earnings_end_at=now + timedelta(days=90),
+        last_earning_at=now,
+        earnings_paid_days=0
+    )
+
+    db.session.add(order)
+    db.session.flush()
+
+    # Record the wallet debit.
+    transaction = WalletTransaction(
+        wallet_id=wallet.id,
+        user_id=user.id,
+        transaction_type="debit",
+        amount=total_amount,
+        status="completed",
+        reference=secrets.token_hex(16),
+        description=f"Purchase of {product.name}"
+    )
+
+    db.session.add(transaction)
+
+    # Award referral commissions for this purchase.
+    award_referral_commissions(order)
+
+    # Save the order, debit and commissions together.
+    db.session.commit()
+
+    flash("Purchase successful! Your product is now active.")
+
+except Exception:
+    db.session.rollback()
+    app.logger.exception("BFT product purchase failed.")
+    flash("Purchase could not be completed. Please contact support.")
+
+return redirect(url_for("market"))
 
 # ==========================================
 # CLAIM DAILY PRODUCT EARNINGS
