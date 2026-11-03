@@ -5645,7 +5645,7 @@ def admin_dashboard():
             <a class="admin-card"href="{{ url_for('admin_buy_product_for_user') }}">🛍️ Buy Product for User<small>Purchase products for registered users</small></a>
             <a class="admin-card"href="{{ url_for('admin_referral_bonus_management') }}">🎁 Referral Bonus Management<small>Manage referral commissions and bonus settings</small></a>
             <a href="{{ url_for('admin_gift_codes') }}">🎟️ Gift Code Management<small>Create and manage gift codes</small></a>
-            <span class="coming-soon">📋 Transaction Records<small>To be connected in the next step</small></span>
+            <a class="admin-card"href="{{ url_for('admin_referral_bonus_management') }}">🎁 Referral Bonus Management<small>Manage referral commissions and bonus settings</small></a>
         </nav>
 
         <!-- USER STATISTICS -->
