@@ -2306,6 +2306,15 @@ def dashboard():
         <span class="my-arrow">›</span>
     </div>
 
+    <a class="my-menu" href="{{ url_for('transaction_history') }}">
+    <div class="my-menu-icon">📋</div>
+    <div class="my-menu-text">
+        <strong>Transaction History</strong>
+        <small>View all wallet transactions</small>
+    </div>
+    <span class="my-arrow">›</span>
+</a>
+
     <a class="my-menu" href="{{ url_for('deposit_history') }}">
     <div class="my-menu-icon">📥</div>
     <div class="my-menu-text">
