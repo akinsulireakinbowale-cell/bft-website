@@ -5018,6 +5018,229 @@ def admin_manual_funding():
         body,
         funding_reference=funding_reference,
             )
+
+# ==========================================
+# ADMIN BUY PRODUCT FOR USER
+# ==========================================
+
+@app.route("/admin/buy-product-for-user", methods=["GET", "POST"])
+@admin_required
+def admin_buy_product_for_user():
+
+    users = User.query.order_by(User.id.desc()).all()
+
+    products = Product.query.filter_by(
+        is_active=True
+    ).order_by(Product.id.desc()).all()
+
+    if request.method == "POST":
+
+        user_id_text = request.form.get("user_id", "").strip()
+        product_id_text = request.form.get("product_id", "").strip()
+        quantity_text = request.form.get("quantity", "1").strip()
+
+        if not user_id_text.isdigit() or not product_id_text.isdigit():
+            flash("Please select a valid user and product.", "error")
+            return redirect(url_for("admin_buy_product_for_user"))
+
+        try:
+            quantity = int(quantity_text)
+
+            if quantity < 1 or quantity > 100:
+                raise ValueError
+
+        except (ValueError, TypeError):
+            flash("Enter a valid quantity between 1 and 100.", "error")
+            return redirect(url_for("admin_buy_product_for_user"))
+
+        try:
+            member = db.session.get(User, int(user_id_text))
+
+            if member is None:
+                flash("User not found.", "error")
+                return redirect(url_for("admin_buy_product_for_user"))
+
+            product = Product.query.filter_by(
+                id=int(product_id_text),
+                is_active=True
+            ).first()
+
+            if product is None:
+                flash("Product is unavailable.", "error")
+                return redirect(url_for("admin_buy_product_for_user"))
+
+            wallet = Wallet.query.filter_by(
+                user_id=member.id
+            ).with_for_update().first()
+
+            if wallet is None:
+                flash("This user does not have a wallet.", "error")
+                return redirect(url_for("admin_buy_product_for_user"))
+
+            unit_price = Decimal(str(product.price))
+            total_amount = unit_price * quantity
+            balance = Decimal(str(wallet.balance))
+
+            if (
+                not total_amount.is_finite()
+                or total_amount <= 0
+            ):
+                flash("Invalid purchase amount.", "error")
+                return redirect(url_for("admin_buy_product_for_user"))
+
+            if balance < total_amount:
+                flash(
+                    f"{member.full_name} has insufficient wallet balance.",
+                    "error"
+                )
+                return redirect(url_for("admin_buy_product_for_user"))
+
+            now = datetime.utcnow()
+
+            # Deduct from the selected user's wallet.
+            wallet.balance = balance - total_amount
+            wallet.updated_at = now
+
+            # Create the product order.
+            order = MarketOrder(
+                user_id=member.id,
+                product_id=product.id,
+                product_name=product.name,
+                quantity=quantity,
+                unit_price=unit_price,
+                total_amount=total_amount,
+                status="approved",
+                earnings_start_at=now,
+                earnings_end_at=now + timedelta(days=90),
+                last_earning_at=now,
+                earnings_paid_days=0
+            )
+
+            db.session.add(order)
+            db.session.flush()
+
+            # Record the wallet debit.
+            transaction = WalletTransaction(
+                wallet_id=wallet.id,
+                user_id=member.id,
+                transaction_type="debit",
+                amount=total_amount,
+                status="completed",
+                reference=f"BFT-ADMIN-PURCHASE-{order.id}-{secrets.token_hex(8)}",
+                description=(
+                    f"Admin purchase: {product.name}, "
+                    f"quantity {quantity}"
+                )
+            )
+
+            db.session.add(transaction)
+
+            # Save the order and debit together.
+            db.session.commit()
+
+            flash(
+                f"Successfully purchased {product.name} "
+                f"for {member.full_name}. "
+                f"Amount: ₦{total_amount:,.2f}",
+                "success"
+            )
+
+            return redirect(url_for("admin_buy_product_for_user"))
+
+        except Exception:
+            db.session.rollback()
+            app.logger.exception(
+                "Admin buy product for user failed."
+            )
+
+            flash(
+                "Purchase failed. No successful order was saved.",
+                "error"
+            )
+
+            return redirect(url_for("admin_buy_product_for_user"))
+
+    body = """
+    <section class="card">
+
+        <h1>🛍️ Buy Product for User</h1>
+
+        <p>Select a registered user and an active product.</p>
+
+        <form method="POST">
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <label>Select User</label>
+
+            <select name="user_id" required>
+                <option value="">Choose a user</option>
+
+                {% for member in users %}
+                    <option value="{{ member.id }}">
+                        ID: {{ member.id }} -
+                        {{ member.full_name }} -
+                        {{ member.email }}
+                    </option>
+                {% endfor %}
+
+            </select>
+
+            <label>Select Product</label>
+
+            <select name="product_id" required>
+                <option value="">Choose a product</option>
+
+                {% for product in products %}
+                    <option value="{{ product.id }}">
+                        {{ product.name }} -
+                        ₦{{ product.price }}
+                    </option>
+                {% endfor %}
+
+            </select>
+
+            <label>Quantity</label>
+
+            <input
+                type="number"
+                name="quantity"
+                min="1"
+                max="100"
+                value="1"
+                required
+            >
+
+            <button
+                type="submit"
+                onclick="return confirm(
+                    'Confirm purchase for this user? Their wallet will be debited.'
+                );"
+            >
+                Confirm Purchase
+            </button>
+
+        </form>
+
+        <p>
+            <a href="{{ url_for('admin_dashboard') }}">
+                Back to Admin Dashboard
+            </a>
+        </p>
+
+    </section>
+    """
+
+    return page(
+        "Buy Product for User",
+        body,
+        users=users,
+        products=products
+)
     
 # ==========================================
 # ADMINISTRATOR DASHBOARD
@@ -5099,7 +5322,7 @@ def admin_dashboard():
             <a href="{{ url_for('admin_withdrawals') }}">📤 Pending Withdrawals<small>Review withdrawal requests</small></a>
             <a href="#manage-users">👥 Manage Users<small>Search and manage registered users</small></a>
             <a href="{{ url_for('admin_manual_funding') }}">💰 Manual Wallet Funding<small>Credit a registered user's wallet</small></a>
-            <span class="coming-soon">🛍️ Buy Product for User<small>To be connected in the next step</small></span>
+            <a class="admin-card"href="{{ url_for('admin_buy_product_for_user') }}">🛍️ Buy Product for User<small>Purchase products for registered users</small></a>
             <span class="coming-soon">🎁 Referral Bonus Management<small>To be connected in the next step</small></span>
             <a href="{{ url_for('admin_gift_codes') }}">🎟️ Gift Code Management<small>Create and manage gift codes</small></a>
             <span class="coming-soon">📋 Transaction Records<small>To be connected in the next step</small></span>
