@@ -752,6 +752,98 @@ def admin_products():
     return page("Manage Products", body, products=products)
 
 # ==========================================
+# ADMIN MARKET ORDERS
+# ==========================================
+
+@app.route("/admin/market-orders")
+@admin_required
+def admin_market_orders():
+
+    market_orders = MarketOrder.query.order_by(
+        MarketOrder.created_at.desc()
+    ).all()
+
+    pending_market_orders = MarketOrder.query.filter_by(
+        status="pending"
+    ).count()
+
+    body = """
+    <section class="card">
+
+        <h1>Market Orders Management</h1>
+
+        <p>
+            Total orders:
+            <strong>{{ market_orders|length }}</strong>
+        </p>
+
+        <p>
+            Pending orders:
+            <strong>{{ pending_market_orders }}</strong>
+        </p>
+
+        {% for order in market_orders %}
+
+            <div class="card" style="margin-bottom:15px;">
+
+                <h3>{{ order.product_name }}</h3>
+
+                <p><strong>Order ID:</strong> {{ order.id }}</p>
+
+                <p><strong>User ID:</strong> {{ order.user_id }}</p>
+
+                <p><strong>Quantity:</strong> {{ order.quantity }}</p>
+
+                <p>
+                    <strong>Unit Price:</strong>
+                    ₦{{ order.unit_price }}
+                </p>
+
+                <p>
+                    <strong>Total:</strong>
+                    ₦{{ order.total_amount }}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    {{ order.status|capitalize }}
+                </p>
+
+                <p>
+                    <strong>Order Date:</strong>
+                    {{ order.created_at }}
+                </p>
+
+                {% if order.earnings_start_at %}
+                    <p>
+                        <strong>Earnings Started:</strong>
+                        {{ order.earnings_start_at }}
+                    </p>
+                {% endif %}
+
+            </div>
+
+        {% else %}
+
+            <p>No market orders have been placed yet.</p>
+
+        {% endfor %}
+
+        <a class="button" href="{{ url_for('admin_dashboard') }}">
+            Back to Admin Dashboard
+        </a>
+
+    </section>
+    """
+
+    return page(
+        "Market Orders Management",
+        body,
+        market_orders=market_orders,
+        pending_market_orders=pending_market_orders,
+    )
+
+# ==========================================
 # LOGIN AND ADMIN PROTECTION
 # ==========================================
 
@@ -2275,6 +2367,12 @@ def dashboard():
            href="{{ url_for('my_orders') }}">
             <div class="my-icon">▤</div>
             My Order
+        </a>
+
+        <a class="button" 
+           href="{{ url_for('admin_market_orders') }}">
+            <div class="my-icon">▣</div>
+            📦 Market Orders
         </a>
 
         <a class="my-action"
