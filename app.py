@@ -2315,6 +2315,15 @@ def dashboard():
     <span class="my-arrow">›</span>
 </a>
 
+<a class="my-menu" href="{{ url_for('withdrawal_history') }}">
+    <div class="my-menu-icon">📤</div>
+    <div class="my-menu-text">
+        <strong>Withdrawal History</strong>
+        <small>View pending, approved and rejected withdrawals</small>
+    </div>
+    <span class="my-arrow">›</span>
+</a>
+
 
     <a class="my-menu" href="{{ url_for('gift_code_page') }}">
         <div class="my-menu-icon">🎀</div>
