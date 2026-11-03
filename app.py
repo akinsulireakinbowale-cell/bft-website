@@ -4671,6 +4671,66 @@ class MarketOrder(db.Model):
         default=0,
     )
 
+class ReferralCommission(db.Model):
+    __tablename__ = "referral_commissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    order_id = db.Column(
+        db.Integer,
+        db.ForeignKey("market_order.id"),
+        nullable=False
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        index=True
+    )
+
+    buyer_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False
+    )
+
+    level = db.Column(db.Integer, nullable=False)
+    rate = db.Column(db.Numeric(6, 4), nullable=False)
+    base_amount = db.Column(db.Numeric(12, 2), nullable=False)
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="completed"
+    )
+
+    reference = db.Column(
+        db.String(100),
+        nullable=False,
+        unique=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    credited_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "order_id",
+            "level",
+            name="uq_referral_commission_order_level"
+        ),
+    )
+
 # ==========================================
 # PRODUCT EARNINGS HISTORY
 # ==========================================
