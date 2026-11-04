@@ -5891,6 +5891,93 @@ def admin_dashboard():
         user_is_active=user_is_active,
         referral_statuses=referral_statuses,
             )
+    @app.route("/admin/referral-lookup", methods=["GET", "POST"])
+@admin_required
+def admin_referral_lookup():
+    searched_user = None
+    referrals = []
+    search_email = ""
+
+    if request.method == "POST":
+        search_email = request.form.get("email", "").strip().lower()
+
+        if search_email:
+            searched_user = User.query.filter(
+                db.func.lower(User.email) == search_email
+            ).first()
+
+            if searched_user:
+                referrals = User.query.filter_by(
+                    referred_by=searched_user.referral_code
+                ).order_by(User.id.desc()).all()
+            else:
+                flash("No user found with that email address.", "error")
+
+    return page(
+        "Referral Lookup",
+        """
+        <div class="card">
+            <h2>🔎 Referral Lookup</h2>
+            <p>Search for a member using their email address.</p>
+
+            <form method="POST">
+                <input
+                    type="email"
+                    name="email"
+                    placeholder="Enter user's email address"
+                    value="{{ search_email }}"
+                    required
+                >
+                <button type="submit">Search User</button>
+            </form>
+        </div>
+
+        {% if searched_user %}
+        <div class="card">
+            <h3>Member Information</h3>
+            <p><strong>Name:</strong> {{ searched_user.full_name }}</p>
+            <p><strong>Email:</strong> {{ searched_user.email }}</p>
+            <p><strong>Phone:</strong> {{ searched_user.phone }}</p>
+            <p><strong>Referral Code:</strong> {{ searched_user.referral_code }}</p>
+            <h3>Total Direct Referrals: {{ referrals|length }}</h3>
+        </div>
+
+        <div class="card">
+            <h3>People Referred</h3>
+
+            {% if referrals %}
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Referral Code</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in referrals %}
+                        <tr>
+                            <td>{{ member.full_name }}</td>
+                            <td>{{ member.email }}</td>
+                            <td>{{ member.phone }}</td>
+                            <td>{{ member.referral_code }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>This member has not referred anyone yet.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        """,
+        searched_user=searched_user,
+        referrals=referrals,
+        search_email=search_email
+    )
 @app.route(
     "/admin/referral-code/<int:user_id>/disable",
     methods=["POST"],
