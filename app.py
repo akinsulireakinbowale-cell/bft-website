@@ -5583,9 +5583,10 @@ def admin_dashboard():
         )
 
     users = query.order_by(User.id.desc()).all()
+
     referral_statuses = {
-    status.user_id: status.is_active
-    for status in ReferralCodeStatus.query.all()
+        status.user_id: status.is_active
+        for status in ReferralCodeStatus.query.all()
     }
 
     total_users = User.query.count()
@@ -5604,7 +5605,7 @@ def admin_dashboard():
 
         <h1>Administrator Dashboard</h1>
 
-<p>Welcome to BFT administration. Choose a section below.</p>
+        <p>Welcome to BFT administration. Choose a section below.</p>
 
         <style>
             .admin-menu {
@@ -5613,7 +5614,8 @@ def admin_dashboard():
                 gap: 12px;
                 margin: 20px 0;
             }
-            .admin-menu a, .admin-menu .coming-soon {
+
+            .admin-menu a {
                 display: block;
                 padding: 16px;
                 border-radius: 12px;
@@ -5622,32 +5624,70 @@ def admin_dashboard():
                 background: linear-gradient(135deg, #b71c1c, #ef6c00);
                 color: #fff;
             }
-            .admin-menu .coming-soon {
-                opacity: .72;
-                background: #666;
-            }
+
             .admin-menu small {
                 display: block;
                 margin-top: 6px;
                 font-weight: 400;
             }
-
         </style>
 
         <h2>Admin Sections</h2>
+
         <nav class="admin-menu">
-            <a class="admin-card"href="{{ url_for('admin_referral_lookup') }}">👥 Referral Lookup<small>Search members and view their referrals</small></a>
-            <a href="{{ url_for('admin_products') }}">🛒 Market Management<small>Manage market products</small></a>
-            <a href="{{ url_for('admin_market_orders') }}">📦 Market Orders<small>View customer market orders</small></a>
-            <a href="{{ url_for('admin_deposits') }}">📥 Pending Deposits<small>Review deposit requests</small></a>
-            <a href="{{ url_for('admin_withdrawals') }}">📤 Pending Withdrawals<small>Review withdrawal requests</small></a>
-            <a href="#manage-users">👥 Manage Users<small>Search and manage registered users</small></a>
-            <a href="{{ url_for('admin_manual_funding') }}">💰 Manual Wallet Funding<small>Credit a registered user's wallet</small></a>
-            <a class="admin-card"href="{{ url_for('admin_buy_product_for_user') }}">🛍️ Buy Product for User<small>Purchase products for registered users</small></a>
-            <a class="admin-card"href="{{ url_for('admin_referral_bonus_management') }}">🎁 Referral Bonus Management<small>Manage referral commissions and bonus settings</small></a>
-            <a href="{{ url_for('admin_gift_codes') }}">🎟️ Gift Code Management<small>Create and manage gift codes</small></a>
-            <a class="admin-card"href="{{ url_for('admin_referral_bonus_management') }}">🎁 Referral Bonus Management<small>Manage referral commissions and bonus settings</small></a>
+
+            <a href="{{ url_for('admin_referral_lookup') }}">
+                👥 Referral Lookup
+                <small>Search members and view their referrals</small>
+            </a>
+
+            <a href="{{ url_for('admin_products') }}">
+                🛒 Market Management
+                <small>Manage market products</small>
+            </a>
+
+            <a href="{{ url_for('admin_market_orders') }}">
+                📦 Market Orders
+                <small>View customer market orders</small>
+            </a>
+
+            <a href="{{ url_for('admin_deposits') }}">
+                📥 Pending Deposits
+                <small>Review deposit requests</small>
+            </a>
+
+            <a href="{{ url_for('admin_withdrawals') }}">
+                📤 Pending Withdrawals
+                <small>Review withdrawal requests</small>
+            </a>
+
+            <a href="#manage-users">
+                👥 Manage Users
+                <small>Search and manage registered users</small>
+            </a>
+
+            <a href="{{ url_for('admin_manual_funding') }}">
+                💰 Manual Wallet Funding
+                <small>Credit a registered user's wallet</small>
+            </a>
+
+            <a href="{{ url_for('admin_buy_product_for_user') }}">
+                🛍️ Buy Product for User
+                <small>Purchase products for registered users</small>
+            </a>
+
+            <a href="{{ url_for('admin_referral_bonus_management') }}">
+                🎁 Referral Bonus Management
+                <small>Manage referral commissions and bonus settings</small>
+            </a>
+
+            <a href="{{ url_for('admin_gift_codes') }}">
+                🎟️ Gift Code Management
+                <small>Create and manage gift codes</small>
+            </a>
+
         </nav>
+
 
         <!-- USER STATISTICS -->
 
@@ -5700,7 +5740,9 @@ def admin_dashboard():
 
         </form>
 
-<div id="manage-users"></div>
+
+        <div id="manage-users"></div>
+
 
         <!-- REGISTERED USERS -->
 
@@ -5737,58 +5779,66 @@ def admin_dashboard():
                     {{ member.referred_by or "None" }}
                 </p>
 
+
+                <!-- REFERRAL CODE STATUS -->
+
                 <p>
-    <strong>Referral Code Status:</strong>
+                    <strong>Referral Code Status:</strong>
 
-    {% if referral_statuses.get(member.id, True) %}
-        <span style="color: green;">Active</span>
-    {% else %}
-        <span style="color: red;">Disabled</span>
-    {% endif %}
-</p>
+                    {% if referral_statuses.get(member.id, True) %}
+                        <span style="color: green;">Active</span>
+                    {% else %}
+                        <span style="color: red;">Disabled</span>
+                    {% endif %}
+                </p>
 
-{% if referral_statuses.get(member.id, True) %}
 
-    <form
-        method="POST"
-        action="{{ url_for(
-            'admin_disable_referral_code',
-            user_id=member.id
-        ) }}"
-        onsubmit="return confirm('Disable this referral code?');"
-    >
-        <input
-            type="hidden"
-            name="csrf_token"
-            value="{{ csrf_token() }}"
-        >
+                {% if referral_statuses.get(member.id, True) %}
 
-        <button type="submit">
-            Disable Referral Code
-        </button>
-    </form>
+                    <form
+                        method="POST"
+                        action="{{ url_for(
+                            'admin_disable_referral_code',
+                            user_id=member.id
+                        ) }}"
+                        onsubmit="return confirm('Disable this referral code?');"
+                    >
 
-{% else %}
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token() }}"
+                        >
 
-    <form
-        method="POST"
-        action="{{ url_for(
-            'admin_enable_referral_code',
-            user_id=member.id
-        ) }}"
-    >
-        <input
-            type="hidden"
-            name="csrf_token"
-            value="{{ csrf_token() }}"
-        >
+                        <button type="submit">
+                            Disable Referral Code
+                        </button>
 
-        <button type="submit">
-            Enable Referral Code
-        </button>
-    </form>
+                    </form>
 
-{% endif %}
+                {% else %}
+
+                    <form
+                        method="POST"
+                        action="{{ url_for(
+                            'admin_enable_referral_code',
+                            user_id=member.id
+                        ) }}"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token() }}"
+                        >
+
+                        <button type="submit">
+                            Enable Referral Code
+                        </button>
+
+                    </form>
+
+                {% endif %}
 
 
                 <!-- EDIT USER -->
@@ -5821,9 +5871,7 @@ def admin_dashboard():
                             'admin_deactivate_user',
                             user_id=member.id
                         ) }}"
-                        onsubmit="return confirm(
-                            'Deactivate this user?'
-                        );"
+                        onsubmit="return confirm('Deactivate this user?');"
                     >
 
                         <input
@@ -5891,37 +5939,65 @@ def admin_dashboard():
         inactive_users=inactive_users,
         user_is_active=user_is_active,
         referral_statuses=referral_statuses,
-            )
-      @app.route("/admin/referral-lookup", methods=["GET", "POST"])
+    )
+
+
+# ==========================================
+# ADMIN REFERRAL LOOKUP
+# ==========================================
+
+@app.route("/admin/referral-lookup", methods=["GET", "POST"])
 @admin_required
 def admin_referral_lookup():
+
     searched_user = None
     referrals = []
     search_email = ""
 
     if request.method == "POST":
-        search_email = request.form.get("email", "").strip().lower()
+
+        search_email = request.form.get(
+            "email", ""
+        ).strip().lower()
 
         if search_email:
+
             searched_user = User.query.filter(
                 db.func.lower(User.email) == search_email
             ).first()
 
             if searched_user:
+
                 referrals = User.query.filter_by(
                     referred_by=searched_user.referral_code
                 ).order_by(User.id.desc()).all()
+
             else:
-                flash("No user found with that email address.", "error")
+
+                flash(
+                    "No user found with that email address.",
+                    "error"
+                )
 
     return page(
         "Referral Lookup",
         """
         <div class="card">
+
             <h2>🔎 Referral Lookup</h2>
-            <p>Search for a member using their email address.</p>
+
+            <p>
+                Search for a member using their email address.
+            </p>
 
             <form method="POST">
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                >
+
                 <input
                     type="email"
                     name="email"
@@ -5929,56 +6005,106 @@ def admin_referral_lookup():
                     value="{{ search_email }}"
                     required
                 >
-                <button type="submit">Search User</button>
+
+                <button type="submit">
+                    Search User
+                </button>
+
             </form>
+
         </div>
+
 
         {% if searched_user %}
-        <div class="card">
-            <h3>Member Information</h3>
-            <p><strong>Name:</strong> {{ searched_user.full_name }}</p>
-            <p><strong>Email:</strong> {{ searched_user.email }}</p>
-            <p><strong>Phone:</strong> {{ searched_user.phone }}</p>
-            <p><strong>Referral Code:</strong> {{ searched_user.referral_code }}</p>
-            <h3>Total Direct Referrals: {{ referrals|length }}</h3>
-        </div>
 
-        <div class="card">
-            <h3>People Referred</h3>
+            <div class="card">
 
-            {% if referrals %}
-            <div style="overflow-x:auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Referral Code</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for member in referrals %}
-                        <tr>
-                            <td>{{ member.full_name }}</td>
-                            <td>{{ member.email }}</td>
-                            <td>{{ member.phone }}</td>
-                            <td>{{ member.referral_code }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <h3>Member Information</h3>
+
+                <p>
+                    <strong>Name:</strong>
+                    {{ searched_user.full_name }}
+                </p>
+
+                <p>
+                    <strong>Email:</strong>
+                    {{ searched_user.email }}
+                </p>
+
+                <p>
+                    <strong>Phone:</strong>
+                    {{ searched_user.phone }}
+                </p>
+
+                <p>
+                    <strong>Referral Code:</strong>
+                    {{ searched_user.referral_code }}
+                </p>
+
+                <h3>
+                    Total Direct Referrals:
+                    {{ referrals|length }}
+                </h3>
+
             </div>
-            {% else %}
-            <p>This member has not referred anyone yet.</p>
-            {% endif %}
-        </div>
+
+
+            <div class="card">
+
+                <h3>People Referred</h3>
+
+                {% if referrals %}
+
+                    <div style="overflow-x:auto;">
+
+                        <table>
+
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Referral Code</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                {% for member in referrals %}
+
+                                    <tr>
+                                        <td>{{ member.full_name }}</td>
+                                        <td>{{ member.email }}</td>
+                                        <td>{{ member.phone }}</td>
+                                        <td>{{ member.referral_code }}</td>
+                                    </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                {% else %}
+
+                    <p>
+                        This member has not referred anyone yet.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
         {% endif %}
         """,
+
         searched_user=searched_user,
         referrals=referrals,
         search_email=search_email
     )
+        
 @app.route(
     "/admin/referral-code/<int:user_id>/disable",
     methods=["POST"],
