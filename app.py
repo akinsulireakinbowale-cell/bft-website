@@ -5892,8 +5892,7 @@ def admin_dashboard():
         user_is_active=user_is_active,
         referral_statuses=referral_statuses,
             )
-    
-    @app.route("/admin/referral-lookup", methods=["GET", "POST"])
+      @app.route("/admin/referral-lookup", methods=["GET", "POST"])
 @admin_required
 def admin_referral_lookup():
     searched_user = None
