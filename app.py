@@ -5636,6 +5636,7 @@ def admin_dashboard():
 
         <h2>Admin Sections</h2>
         <nav class="admin-menu">
+            <a class="admin-card"href="{{ url_for('admin_referral_lookup') }}">👥 Referral Lookup<small>Search members and view their referrals</small></a>
             <a href="{{ url_for('admin_products') }}">🛒 Market Management<small>Manage market products</small></a>
             <a href="{{ url_for('admin_market_orders') }}">📦 Market Orders<small>View customer market orders</small></a>
             <a href="{{ url_for('admin_deposits') }}">📥 Pending Deposits<small>Review deposit requests</small></a>
