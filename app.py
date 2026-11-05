@@ -2,7 +2,7 @@ import os
 import secrets
 import string
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import wraps
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
