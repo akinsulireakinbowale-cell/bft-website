@@ -4297,17 +4297,17 @@ def deposit_funds():
 
         <p>
             <strong>Bank Name:</strong>
-            9Payment Service Bank (9PSB)
+            Palm pay 
         </p>
 
         <p>
             <strong>Account Name:</strong>
-            AmeX Network
+            Akinsulire Opemipo 
         </p>
 
         <p>
             <strong>Account Number:</strong>
-            6718461313
+            8065416332
         </p>
 
         <p>
