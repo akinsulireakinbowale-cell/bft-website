@@ -266,6 +266,12 @@ class ReferralCommission(db.Model):
         nullable=False
     )
 
+    created_at = db.Column(
+    db.DateTime,
+    nullable=False,
+    default=datetime.utcnow
+    )
+
     credited_at = db.Column(
         db.DateTime,
         default=datetime.utcnow
