@@ -231,6 +231,55 @@ def award_referral_commissions(order):
         referral_code = referrer.referred_by
 
 # ==========================================
+# REFERRAL COMMISSION MODEL
+# ==========================================
+
+class ReferralCommission(db.Model):
+
+    __tablename__ = "referral_commissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    order_id = db.Column(db.Integer, nullable=False)
+
+    user_id = db.Column(db.Integer, nullable=False)
+
+    buyer_user_id = db.Column(db.Integer, nullable=False)
+
+    level = db.Column(db.Integer, nullable=False)
+
+    rate = db.Column(db.Numeric(10, 4), nullable=False)
+
+    base_amount = db.Column(db.Numeric(18, 2), nullable=False)
+
+    amount = db.Column(db.Numeric(18, 2), nullable=False)
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="completed"
+    )
+
+    reference = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=False
+    )
+
+    credited_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "order_id",
+            "level",
+            name="unique_referral_order_level"
+        ),
+    )
+
+# ==========================================
 # DATABASE MODELS
 # ==========================================
 
